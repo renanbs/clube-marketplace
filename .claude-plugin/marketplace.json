@@ -7,7 +7,7 @@
     {
       "name": "clube-marketplace",
       "description": "Internal AI skills, agents, and multi-harness marketplace suite for Clube projects.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "source": "./"
     }
   ]
