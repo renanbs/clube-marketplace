@@ -1,6 +1,6 @@
 ---
 name: init
-description: Generic AI project initialization and harness onboarding skill for Clube projects. Sets up AGENTS.md as the single source of truth, detects legacy instruction files and prompts for migration, and synchronizes harness pointer files (CLAUDE.md, GEMINI.md, .cursorrules) with @AGENTS.md.
+description: Generic AI project initialization and harness onboarding skill for Clube projects. Sets up AGENTS.md as the single source of truth, detects legacy instruction files and non-standard skills/agents formats, prompts the user to migrate or keep them, and synchronizes harness pointer files (CLAUDE.md, GEMINI.md, .cursorrules) with @AGENTS.md.
 ---
 
 # init — Generic Project AI Onboarding & Harness Setup
@@ -13,32 +13,49 @@ Sets up or aligns a repository for multi-harness AI development (Oh My Pi, Claud
 
 ### Core Principles
 1. **Single Source of Truth:** All project instructions, conventions, and profiles persist **strictly in `AGENTS.md`**.
-2. **Never Overwrite Silently:** If existing configurations or custom instructions exist (`CLAUDE.md`, `GEMINI.md`, `.cursorrules`, etc.), report them and ask the user whether to migrate their content into `AGENTS.md` or follow specific custom instructions.
+2. **Never Overwrite Silently:** If existing configurations, legacy instructions, or non-standard skills/agents are detected, report them and ask the user how to handle them.
 3. **Multi-Harness Pointer Alignment:** Supporting harnesses resolve `@AGENTS.md` imports. The sync script (`scripts/sync-harness-configs.sh`) sets up `@AGENTS.md` pointers without duplicating content.
 4. **Product Agnostic:** Does not make rigid assumptions about language, framework, or tooling. The user confirms or supplies the project specifics.
 
 ---
 
-## Step 1 — Audit Existing Project Instructions
+## Step 1 — Audit Existing Instructions, Skills, and Agents
 
-Check for any pre-existing instruction or prompt files in the repository root and subdirectories:
-- `CLAUDE.md`
-- `GEMINI.md`
-- `.cursorrules`
-- `.cursor/rules/`
-- Custom prompt files (`.prompt`, `PROMPT.md`, `INSTRUCTIONS.md`, etc.)
+Check the repository root and subdirectories for:
+1. **Instruction & Prompt Files:**
+   - `CLAUDE.md`
+   - `GEMINI.md`
+   - `.cursorrules`
+   - `.cursor/rules/`
+   - Custom prompt files (`.prompt`, `PROMPT.md`, `INSTRUCTIONS.md`, etc.)
 
-### Behavior:
-- **Case A: No existing files found.**
-  - Proceed directly to **Step 2** to initialize a clean `AGENTS.md`.
-- **Case B: Files exist and already contain only `@AGENTS.md`.**
-  - Report that harness pointers are already aligned. Check if `AGENTS.md` exists and contains required sections.
-- **Case C: Legacy / custom content detected.**
-  - **STOP and REPORT:** List all detected files and summarize their contents.
-  - **ASK USER:** Ask whether to:
-    1. Migrate and consolidate legacy content into the canonical `AGENTS.md`.
-    2. Keep existing files separate and request manual guidance.
-    3. Overwrite/replace with a fresh `AGENTS.md` template (after user confirmation).
+2. **Skills & Agents in Non-Standard Formats:**
+   - Skills placed in flat files (e.g. `skills/foo.md` or `.claude/skills/foo.md` instead of `skills/foo/SKILL.md`).
+   - Legacy agent definitions or directories (`.omp/skills/`, `.cursor/agents/`, `agents/` in non-standard layout).
+
+### Decision Flow When Non-Standard Formats or Legacy Files Are Found:
+
+If any legacy instructions, non-standard skills, or non-standard agent files are found, **STOP and ask the user:**
+
+```
+Found existing instructions / skills / agents in non-standard format:
+  • <list of detected files and paths>
+
+How would you like to proceed?
+  [1] Move to standard format (Recommended)
+      - Migrate instructions into canonical AGENTS.md
+      - Reorganize skills into standard skills/<name>/SKILL.md
+      - Replace sibling harness configs with @AGENTS.md pointer
+  [2] Leave as is
+      - Keep existing files intact without moving or altering them
+```
+
+- **If User Chooses Option 1 (Move to standard):**
+  - Migrate and consolidate the content into `AGENTS.md` and `skills/<name>/SKILL.md`.
+  - Replace the harness config files with `@AGENTS.md`.
+- **If User Chooses Option 2 (Leave as is):**
+  - Preserve all existing files as they are.
+  - Do not overwrite or move them.
 
 ---
 
@@ -84,7 +101,7 @@ This creates or verifies:
 - `GEMINI.md` -> containing `@AGENTS.md`
 - `.cursorrules` -> containing `@AGENTS.md`
 
-Any file that already contains custom instructions is **preserved** and reported, never overwritten without explicit user approval.
+Any file that already contains custom instructions and was selected to stay as-is (Option 2) is **preserved** and not overwritten.
 
 ---
 
@@ -100,7 +117,8 @@ Validate the final state and present the outcome using the **Standard 4-Phase Ou
 - **Reversible:** Yes (files can be edited or restored)
 
 ### 2. Execution
-- ✅ Checked repository root for legacy instruction files
+- ✅ Checked repository root for legacy instruction files and non-standard skills/agents
+- ✅ User selected migration strategy: [Option 1: Move to standard | Option 2: Leave as is]
 - ✅ Configured canonical AGENTS.md
 - ✅ Synchronized CLAUDE.md, GEMINI.md, and .cursorrules pointers
 
@@ -110,7 +128,7 @@ Validate the final state and present the outcome using the **Standard 4-Phase Ou
 | **Status** | success |
 | **Source of Truth** | AGENTS.md |
 | **Harness Pointers** | CLAUDE.md, GEMINI.md, .cursorrules (@AGENTS.md) |
-| **Legacy Files Migrated** | None (fresh setup) |
+| **Migration Decision** | Moved to standard / Kept as-is |
 
 ### 4. Recommended Actions
 - Review and refine project-specific build/test commands in AGENTS.md as needed.
@@ -120,5 +138,5 @@ Validate the final state and present the outcome using the **Standard 4-Phase Ou
 
 ## Red Flags — STOP Immediately If:
 - Writing project instructions to `CLAUDE.md`, `GEMINI.md`, or `.cursorrules` directly instead of `AGENTS.md`.
-- Overwriting or deleting existing legacy instruction files without presenting their contents and getting explicit user confirmation.
+- Overwriting, moving, or deleting existing legacy files/skills without prompting the user with the two options (Option 1: Move to standard, Option 2: Leave as is).
 - Hardcoding speculative environment assumptions without user input.

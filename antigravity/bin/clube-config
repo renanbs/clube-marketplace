@@ -23,9 +23,9 @@ cmd_help() {
     echo -e "Usage: ${BOLD}clube-config <command> [options]${NC}"
     echo ""
     echo "Commands:"
-    echo "  init [DIR]     Initialize project AI configuration and sync harness pointers"
+    echo "  init [DIR]     Initialize project AI configuration, audit formats, and sync harness pointers"
     echo "  sync [DIR]     Synchronize @AGENTS.md pointers for CLAUDE.md, GEMINI.md, .cursorrules"
-    echo "  check          Audit active harness alignment and AGENTS.md integrity"
+    echo "  check          Audit active harness alignment, skills/agents formats, and AGENTS.md integrity"
     echo "  status         Alias for check"
     echo "  install        Install clube-config CLI into ~/.local/bin"
     echo "  help           Display this help message"
@@ -38,7 +38,7 @@ cmd_check() {
 
     echo -e "${BOLD}### 1. Plan${NC}\n"
     echo -e "- **Command:** clube-config check"
-    echo -e "- **Action:** Audit AI host harness detection and repository configuration"
+    echo -e "- **Action:** Audit AI host harness detection, skills/agents layout, and repository configuration"
     echo -e "- **Reversible:** read-only / not applicable\n"
 
     echo -e "${BOLD}### 2. Execution${NC}\n"
@@ -64,6 +64,21 @@ cmd_check() {
             echo -e "  ⏭️ Missing pointer file: ${BOLD}$f${NC}"
         fi
     done
+
+    # Check skills format
+    if [ -d "skills" ]; then
+        local non_standard_skills=()
+        for s in skills/*; do
+            if [ -f "$s" ] && [ "${s##*.}" = "md" ]; then
+                non_standard_skills+=("$s")
+            fi
+        done
+        if [ ${#non_standard_skills[@]} -gt 0 ]; then
+            echo -e "  ⚠️ Non-standard flat skills detected: ${non_standard_skills[*]} (expected: skills/<name>/SKILL.md)"
+        else
+            echo -e "  ✅ Skills directory structure is compliant"
+        fi
+    fi
 
     echo -e "\n${BOLD}### 3. Summary${NC}\n"
     echo -e "| Field | Content |"
@@ -97,7 +112,7 @@ cmd_init() {
     echo -e "${BOLD}=== CLUBE PROJECT AI ONBOARDING ===${NC}"
     echo -e "Target directory: ${BOLD}$target${NC}\n"
 
-    # Check for existing instruction files
+    # Check for existing instruction files and non-standard formats
     local existing_legacy=()
     for f in "$target/CLAUDE.md" "$target/GEMINI.md" "$target/.cursorrules" "$target/.cursor/rules"*; do
         if [ -e "$f" ]; then
@@ -113,14 +128,24 @@ cmd_init() {
         fi
     done
 
+    # Check for flat/non-standard skills
+    if [ -d "$target/skills" ]; then
+        for s in "$target"/skills/*; do
+            if [ -f "$s" ] && [ "${s##*.}" = "md" ]; then
+                existing_legacy+=("$s")
+            fi
+        done
+    fi
+
     if [ ${#existing_legacy[@]} -gt 0 ]; then
-        echo -e "${YELLOW}Existing configuration / custom instruction files detected:${NC}"
+        echo -e "${YELLOW}Non-standard formats / custom instruction files detected:${NC}"
         for item in "${existing_legacy[@]}"; do
             echo -e "  • $item"
         done
         echo ""
-        echo -e "${BOLD}Note:${NC} AGENTS.md is the single canonical source of truth."
-        echo -e "Please review whether to migrate legacy instructions into AGENTS.md."
+        echo -e "${BOLD}Options available:${NC}"
+        echo -e "  [1] Move to standard format (migrate instructions to AGENTS.md, skills to skills/<name>/SKILL.md)"
+        echo -e "  [2] Leave as is (preserve existing files without modifying)"
     fi
 
     if [ ! -f "$target/AGENTS.md" ]; then
