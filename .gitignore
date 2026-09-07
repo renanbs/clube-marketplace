@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build & temporary artifacts
+dist/
+build/
+*.tmp
+*.log
+.DS_Store
+
+# State & caches
+.local/
+.cache/
+*.swp
+*~

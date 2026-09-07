@@ -1,0 +1,12 @@
+---
+description: Clube Marketplace multi-harness rules and conventions
+globs: *
+alwaysApply: true
+---
+
+# Clube Marketplace Conventions
+
+- `AGENTS.md` is the single source of truth across all projects.
+- Harness config files (`CLAUDE.md`, `GEMINI.md`, `.cursorrules`) should contain `@AGENTS.md` to import the canonical instructions.
+- All AI skills, agents, commands, and documentation in this repository must remain in English.
+- Use 4-phase output for command reporting: Plan → Execution → Summary → Recommended Actions.

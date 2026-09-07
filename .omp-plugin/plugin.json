@@ -1,0 +1,21 @@
+{
+  "name": "clube-marketplace",
+  "version": "1.0.0",
+  "description": "Internal AI skills, agents, and multi-harness marketplace suite for Clube projects.",
+  "author": {
+    "name": "Clube"
+  },
+  "repository": "https://github.com/clubedepontos/clube-marketplace",
+  "license": "MIT",
+  "keywords": [
+    "omp-plugin",
+    "claude-plugin",
+    "claude-code-plugin",
+    "cursor-plugin",
+    "ai-agents",
+    "skills",
+    "marketplace"
+  ],
+  "skills": "./skills/",
+  "commands": "./commands/"
+}

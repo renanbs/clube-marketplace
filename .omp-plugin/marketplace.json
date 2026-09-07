@@ -1,0 +1,14 @@
+{
+  "name": "clube-marketplace",
+  "owner": {
+    "name": "Clube"
+  },
+  "plugins": [
+    {
+      "name": "clube-marketplace",
+      "description": "Internal AI skills, agents, and multi-harness marketplace suite for Clube projects.",
+      "version": "1.0.0",
+      "source": "./"
+    }
+  ]
+}
