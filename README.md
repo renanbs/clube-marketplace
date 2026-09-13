@@ -74,7 +74,6 @@ codex plugin install clube --source clube
 | Skill | Focus |
 | :--- | :--- |
 | `clube:init` | Guided project onboarding & `Project Profile` generation in `AGENTS.md` and `CLAUDE.md`. |
-| `clube:clube-marketplace-architecture` | Architectural constitution and multi-harness standards. |
 | `clube:fullstack-performance-resilience` | Runtime optimization (Node/Bun/Go/Python), deploy resilience, chunk recovery, and database query tuning. |
 | `clube:building-data-apps` | Modern data apps, interactive dashboards, and reports (React, Streamlit, FastAPI). |
 | `clube:saas-seo-geo` | Technical SEO and Generative Engine Optimization (GEO) for SaaS and landing pages. |
