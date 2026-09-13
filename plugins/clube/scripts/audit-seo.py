@@ -13,9 +13,15 @@ import sys
 import re
 import json
 import argparse
+from datetime import datetime, timezone
 from pathlib import Path
 
-IGNORED_DIRS = {'.git', 'node_modules', 'dist', 'build', '.specs', 'vendor', '__pycache__', '.venv', 'venv'}
+# Sibling module import
+script_dir = Path(__file__).parent.resolve()
+sys.path.insert(0, str(script_dir))
+import ui  # noqa: E402
+
+IGNORED_DIRS = {'.git', 'node_modules', 'dist', 'build', '.specs', 'vendor', '__pycache__', '.venv', 'venv', '.clube'}
 
 def has_web_landing_pages(target_dir):
     for root, dirs, files in os.walk(target_dir):
@@ -121,10 +127,18 @@ def audit(target_dir):
     all_findings.extend(audit_robots_and_noindex(target_dir))
     all_findings.extend(audit_html_metadata(target_dir))
 
+    issues_count = len(all_findings)
+    score = ui.calculate_health_score(issues_count, penalty_per_issue=20)
+    verdict = "PASS" if issues_count == 0 else "OPTIMIZATIONS AVAILABLE"
+
     return {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "audit": "seo",
         "pillar": "SaaS SEO & Generative Engine Optimization",
-        "target": target_dir,
-        "issues_count": len(all_findings),
+        "target": os.path.abspath(target_dir),
+        "issues_count": issues_count,
+        "score": score,
+        "verdict": verdict,
         "issues": all_findings
     }
 
@@ -135,33 +149,42 @@ def main():
     args = parser.parse_args()
 
     result = audit(args.target)
+    ui.save_runlog(result)
 
     if args.json:
         print(json.dumps(result, indent=2))
         sys.exit(0 if result["issues_count"] == 0 else 1)
 
-    print("### 1. Plan")
+    ui.print_header("CLUBE SAAS SEO & GEO AUDIT", "Deterministic AI Search (llms.txt), Metadata & Indexing Scanner")
+
+    print(f"{ui.BOLD}### 1. Plan{ui.RESET}\n")
     print(f"- **Audit:** SaaS SEO & Generative Engine Optimization (`clube:saas-seo-geo`)")
-    print(f"- **Target:** {os.path.abspath(args.target)}")
+    print(f"- **Target:** {result['target']}")
     print(f"- **Mode:** Deterministic static analysis\n")
 
-    print("### 2. Execution")
+    print(f"{ui.BOLD}### 2. Execution{ui.RESET}\n")
     if result["issues_count"] == 0:
-        print("  ✅ All checked SEO & GEO patterns passed.")
+        print(f"  {ui.format_badge('PASS')} All checked SEO & GEO patterns passed.\n")
     else:
-        print(f"  ⚠️ Found {result['issues_count']} SEO / GEO optimization opportunities:")
+        print(f"  {ui.format_badge('WARN')} Found {result['issues_count']} SEO / GEO optimization opportunities:\n")
         for item in result["issues"]:
-            badge = "❌" if item["severity"] == "HIGH" else "⚠️"
+            badge = ui.format_badge("FAIL") if item["severity"] == "HIGH" else ui.format_badge("WARN")
             file_ref = f" [{item.get('file', '')}]" if item.get('file') else ""
             print(f"  {badge} [{item['type']}]{file_ref}: {item['description']}")
+        print()
 
-    print("\n### 3. Summary")
-    print("| Metric | Value |")
-    print("| :--- | :--- |")
-    print(f"| SEO & GEO Findings | {result['issues_count']} |")
-    print(f"| Status | {'PASS' if result['issues_count'] == 0 else 'OPTIMIZATIONS AVAILABLE'} |")
+    print(f"{ui.BOLD}### 3. Summary{ui.RESET}\n")
+    print(f"Health Score: {ui.render_health_bar(result['score'])}\n")
 
-    print("\n### 4. Recommended Actions")
+    summary_headers = ["Metric", "Value", "Status"]
+    summary_rows = [
+        ["SEO & GEO Findings", str(result["issues_count"]), ui.format_badge("PASS" if result["issues_count"] == 0 else "OPTIMIZATIONS", "PASS" if result["issues_count"] == 0 else f"{result['issues_count']} ITEMS")],
+        ["Health Score", f"{result['score']}%", ui.format_badge("PASS" if result["score"] >= 80 else ("WARN" if result["score"] >= 50 else "FAIL"))],
+        ["Runlog Saved", ".clube/audit-last.json", ui.format_badge("PASS")],
+    ]
+    print(ui.render_table(summary_headers, summary_rows))
+
+    print(f"\n{ui.BOLD}### 4. Recommended Actions{ui.RESET}\n")
     if result["issues_count"] == 0:
         print("- SEO structure and AI search indexation files are active.")
     else:

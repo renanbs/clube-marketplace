@@ -1,15 +1,15 @@
 ---
 name: fullstack-performance-resilience
 description: |
-  Especialista em performance fullstack, otimização de runtime, resiliência de deploys e tuning de banco de dados.
-  Agnóstica de provedor e de stack: cada seção declara o princípio e depois exemplifica numa linguagem concreta.
-  Ative esta skill sempre que:
-  - Configurar builds de frontend (Vite, Astro, Rollup, Webpack), code-splitting e lazy loading de rotas ou componentes.
-  - Resolver ou prevenir erros de carregamento de módulos dinâmicos (chunks 404 em deploys de SPAs).
-  - Configurar headers de CDN e políticas de cache HTTP (Cache-Control, immutable, ETag 304 com índices adequados).
-  - Otimizar serviços em containers (GOMAXPROCS, pools de banco, concorrência).
-  - Escrever consultas complexas ou criar migrations com índices (índices parciais, funcionais e CONCURRENTLY).
-  - Implementar paralelismo com errgroup ou métricas de latência com Prometheus sem explosão de cardinalidade.
+  Specialist in fullstack performance, runtime optimization, deployment resilience, and database tuning.
+  Stack- and provider-agnostic: each section establishes the core architectural principle followed by concrete implementation examples.
+  Activate this skill whenever:
+  - Configuring frontend builds (Vite, Astro, Rollup, Webpack), code-splitting, and lazy loading for routes or components.
+  - Resolving or preventing dynamic module loading errors (chunk 404s during SPA rolling deployments).
+  - Configuring CDN edge headers and HTTP caching policies (Cache-Control, immutable, ETag 304 with proper indexes).
+  - Tuning containerized runtimes (GOMAXPROCS/automaxprocs, database connection pooling, concurrency).
+  - Authoring complex queries or migrations with indexes (partial, functional, and CONCURRENTLY).
+  - Implementing parallel queries via errgroup/Promise.all or Prometheus latency metrics without cardinality explosion.
 license: Apache-2.0
 metadata:
   version: v2.0
@@ -18,19 +18,19 @@ metadata:
 
 # Fullstack Performance & Resilience Playbook
 
-Práticas de desempenho, resiliência e estabilidade para frontends modernos, APIs em container e bancos relacionais.
+Performance, resilience, and stability engineering practices for modern frontends, containerized APIs, and relational databases.
 
-> **Como ler esta skill:** cada seção declara primeiro o **princípio** (o que precisa ser verdade e por quê) e depois um **exemplo** numa stack concreta — Vue/Vite no frontend, Go/Gin no backend, PostgreSQL no banco. O princípio é o que viaja entre projetos; o exemplo se traduz para a stack em uso.
+> **How to read this skill:** Each section first declares the **principle** (what must hold true and why) followed by an **example** in a concrete stack — Vue/Vite on the frontend, Go/Gin on the backend, PostgreSQL for the database. The principle is what transfers across projects; the example translates to the active stack.
 
 ---
 
-## 1. Resiliência de Deploys em SPAs: Chunk Recovery Global
+## 1. SPA Rolling Deployment Resilience: Global Chunk Recovery
 
-**Princípio:** numa SPA com code-splitting servida por CDN, publicar uma nova versão remove os arquivos com hash da versão anterior. Usuários com o app já aberto recebem 404 ao navegar para uma rota lazy ou abrir um componente assíncrono. O app precisa detectar esse erro específico e recarregar a página uma vez, com trava contra loop infinito.
+**Principle:** In a code-split SPA served via CDN, deploying a new release removes or invalidates the hashed asset chunks of the previous release. Users with the application already open encounter HTTP 404 errors when navigating to a lazy-loaded route or opening an asynchronous component. The application must detect this specific error and trigger a single page reload with a guard against infinite reload loops.
 
-**Dois pontos de captura são necessários** — cobrir só um deixa metade dos casos de fora:
-1. **Erro do roteador** (`router.onError`): cobre navegação para uma rota lazy.
-2. **Erro de preload do bundler** (`vite:preloadError`): cobre componentes assíncronos filhos (`defineAsyncComponent`, `React.lazy`) carregados dentro de uma view já montada — um modal que falha ao abrir, por exemplo. Esse caso **não** passa pelo roteador.
+**Two capture points are strictly required** — covering only one leaves half of all failure modes unhandled:
+1. **Router error hook** (`router.onError`): Catches route transitions to lazy-loaded page components.
+2. **Bundler preload error hook** (`vite:preloadError`): Catches asynchronous child components (`defineAsyncComponent`, `React.lazy`) dynamically mounted inside an already active view — such as a modal dialog that fails upon opening. This case **does not** trigger router navigation hooks.
 
 ```javascript
 const CHUNK_RELOAD_KEY = 'app:lazy_chunk_reload';
@@ -55,23 +55,23 @@ function triggerRecoveryReload(targetUrl) {
     return;
   }
 
-  // Já recarregamos uma vez para este destino e falhou de novo: não insista.
+  // Reload was already attempted once for this destination and failed again: do not loop.
   sessionStorage.removeItem(CHUNK_RELOAD_KEY);
-  console.error('Falha persistente ao carregar módulo após atualização de versão:', reloadTarget);
+  console.error('Persistent failure loading module after version update:', reloadTarget);
 }
 
 export function installLazyRouteChunkRecovery(router) {
-  // 1. Interceptador do bundler: cobre rotas E componentes assíncronos filhos.
+  // 1. Bundler interceptor: covers route chunks AND async child components.
   window.addEventListener('vite:preloadError', (event) => {
     event.preventDefault();
     triggerRecoveryReload(window.location.href);
   });
 
-  // 2. Interceptador do roteador.
+  // 2. Router interceptor.
   if (router && typeof router.onError === 'function') {
     router.onError((error, to) => {
       if (!isLazyRouteChunkLoadError(error)) return;
-      // Use fullPath, não pathname: pathname descarta a query string do destino.
+      // Use fullPath instead of pathname to preserve target query parameters.
       const target = to?.fullPath || window.location.href;
       triggerRecoveryReload(target);
     });
@@ -83,25 +83,25 @@ export function installLazyRouteChunkRecovery(router) {
 }
 ```
 
-Instale junto da criação do router (`router/index.ts` ou `main.ts`):
+Install during router initialization (`router/index.ts` or `main.ts`):
 ```javascript
 import { installLazyRouteChunkRecovery } from './lazyRouteChunkRecovery';
 installLazyRouteChunkRecovery(router);
 ```
 
-Cubra `isLazyRouteChunkLoadError` com teste unitário — é detecção por string de mensagem de erro, que muda entre versões de browser e bundler, e o teste é o que avisa quando parar de bater.
+Always cover `isLazyRouteChunkLoadError` with unit tests — error message strings can shift across browser engines and bundler releases, and automated tests are your safeguard against regressions.
 
 ---
 
-## 2. Política de Cache na Borda (CDN & HTTP Headers)
+## 2. Edge Caching Policy (CDN & HTTP Headers)
 
-**Princípio:** existem duas classes de arquivo e elas precisam de políticas opostas.
-* **Assets com hash no nome** (`Dashboard-a8f12.js`): o conteúdo nunca muda para aquele nome. Cache de 1 ano, `immutable`.
-* **Arquivos de entrada sem hash** (`index.html`, `sw.js`, `manifest.webmanifest`, `robots.txt`, `sitemap.xml`): são o ponteiro para a versão atual. Precisam revalidar sempre, ou o usuário fica preso numa versão antiga apontando para chunks que já não existem — o que aciona a seção 1 desnecessariamente.
+**Principle:** Assets fall into two distinct classes requiring opposing caching strategies:
+* **Hashed static assets** (`Dashboard-a8f12.js`): The content is immutable for a given file name. Cache for 1 year with `immutable`.
+* **Unhashed entrypoints** (`index.html`, `sw.js`, `manifest.webmanifest`, `robots.txt`, `sitemap.xml`): These serve as pointers to the current deployment version. They must be revalidated on every request, otherwise users remain locked to outdated entrypoints referencing nonexistent chunks — needlessly triggering chunk recovery.
 
-**Declare caminhos explícitos, não catch-all.** É tentador escrever uma regra `/(.*)` com `no-cache` e sobrescrevê-la com `/assets/(.*)` depois, confiando na ordem de precedência do provedor. Evite: a semântica de precedência varia entre CDNs, é fácil de quebrar com um reordenamento inocente, e faz a regra correta depender de um detalhe não-óbvio. Enumerar os arquivos de entrada é mais verboso e mais previsível.
+**Declare explicit paths rather than relying on catch-all overrides.** Relying on a root `/(.*)` catch-all with `no-cache` overridden by `/assets/(.*)` depends on provider-specific precedence rules. Precedence semantics vary across CDNs, break easily upon reordering, and create subtle edge bugs. Explicitly enumerating entrypoint paths is more predictable.
 
-*Exemplo em formato Vercel (`vercel.json`):*
+*Vercel configuration example (`vercel.json`):*
 ```json
 {
   "headers": [
@@ -114,49 +114,49 @@ Cubra `isLazyRouteChunkLoadError` com teste unitário — é detecção por stri
 }
 ```
 
-*Equivalente em Nginx:*
+*Nginx equivalent:*
 ```nginx
 location /assets/ { add_header Cache-Control "public, max-age=31536000, immutable"; }
 location = /index.html { add_header Cache-Control "no-cache, no-store, must-revalidate"; }
 location = /sw.js     { add_header Cache-Control "no-cache, no-store, must-revalidate"; }
 ```
-Na Cloudflare, o equivalente é Cache Rules por path; no CloudFront, Cache Policies por behavior.
+On Cloudflare, configure Cache Rules by path; on AWS CloudFront, configure Cache Policies per behavior.
 
-> ⚠️ **Não empilhe Service Worker sobre isso sem necessidade.** Se o app não precisa funcionar offline de verdade, um SW que intercepta assets apenas para cacheá-los é redundante com o cache HTTP (que já é ótimo com hashes imutáveis) e adiciona uma camada a mais de invalidação para depurar quando algo fica velho. Só registre SW se houver requisito funcional de offline.
+> ⚠️ **Avoid unnecessary Service Workers.** If the application has no genuine offline functional requirements, a Service Worker that merely caches static assets is redundant with HTTP caching (which is already optimal with immutable hashes) and introduces an extra invalidation layer to debug. Only register a Service Worker when offline operation is a required feature.
 
 ---
 
-## 3. Runtime em Container
+## 3. Containerized Runtime Optimization
 
-### A. Adequação à quota de CPU
+### A. CPU Quota Alignment
 
-**Princípio:** runtimes que dimensionam o pool de threads pelo número de núcleos leem os núcleos da **máquina host**, não a quota do container. Num container limitado a 1 vCPU rodando num host de 64 núcleos, o runtime cria 64 threads que disputam uma fatia de CPU, e o cgroup aplica *throttling* CFS — latência alta e errática sem que nenhuma métrica de uso pareça saturada.
+**Principle:** Runtimes that size their internal thread pools or worker counts based on available CPU cores read the **host machine's** physical cores, not the container's cgroup CPU quota. In a container restricted to 1 vCPU running on a 64-core host, the runtime spawns 64 threads competing for CPU slices. The kernel cgroup applies CFS throttling, producing erratic high latency without visible CPU saturation in standard metrics.
 
-*Em Go:* import anônimo que ajusta `GOMAXPROCS` pela quota do cgroup.
+*In Go:* Add an anonymous import that dynamically adjusts `GOMAXPROCS` to match the cgroup quota:
 ```go
 import _ "go.uber.org/automaxprocs"
 ```
-*Em outras runtimes:* Node respeita a quota para o event loop mas não para `UV_THREADPOOL_SIZE` (ajuste manual); JVM moderna lê cgroups com `-XX:+UseContainerSupport` (padrão desde o JDK 10); Python com Gunicorn exige definir `workers` explicitamente em vez de derivar de `os.cpu_count()`.
+*In other runtimes:* Node.js respects container quotas for its main event loop but requires manual tuning of `UV_THREADPOOL_SIZE`; modern JVMs read cgroups automatically via `-XX:+UseContainerSupport` (default since JDK 10); Python with Gunicorn requires explicitly setting `workers` rather than deriving from `os.cpu_count()`.
 
-### B. Pool de conexões do banco
+### B. Database Connection Pool Sizing
 
-**Princípio:** o padrão de vários drivers é pool ilimitado. Com várias réplicas, o número total de conexões é `réplicas × pool`, e o Postgres aloca memória por conexão — é assim que se esgota o banco sem nenhum pico de tráfego real. Dimensione pensando no total, não na réplica isolada.
+**Principle:** Many database drivers default to unbounded connection pools. With multiple service replicas, the total connection count is `replicas × pool_size`. Relational databases like PostgreSQL allocate significant memory per active connection — easily exhausting backend resources without any actual traffic spike. Always size connection pools globally across all replicas.
 
 ```go
-db.SetMaxOpenConns(20)                 // teto por réplica: 20 × nº de réplicas ≤ max_connections do banco
-db.SetMaxIdleConns(10)                 // conexões prontas para absorver picos
-db.SetConnMaxLifetime(5 * time.Minute) // recicla conexões (evita conexões zumbis atrás de proxies)
-db.SetConnMaxIdleTime(2 * time.Minute) // libera ociosas para poupar RAM do banco
+db.SetMaxOpenConns(20)                 // Per-replica ceiling: 20 × replica_count <= database max_connections
+db.SetMaxIdleConns(10)                 // Warm idle connections to absorb traffic bursts
+db.SetConnMaxLifetime(5 * time.Minute) // Periodically recycles connections to prevent stale proxies/zombies
+db.SetConnMaxIdleTime(2 * time.Minute) // Releases idle connections to preserve database RAM
 ```
-Equivalentes: `pool_size` / `max_overflow` no SQLAlchemy, `max`/`idleTimeoutMillis` no `pg` do Node, `maximumPoolSize` no HikariCP.
+Equivalents: `pool_size` / `max_overflow` in SQLAlchemy, `max` / `idleTimeoutMillis` in Node `pg`, `maximumPoolSize` in HikariCP.
 
 ---
 
-## 4. Paralelismo de Consultas Independentes
+## 4. Parallel Independent Queries
 
-**Princípio:** telas de dashboard agregam várias consultas que não dependem umas das outras. Executadas em série, a latência é a soma; em paralelo, é a maior delas. O paralelismo precisa propagar o contexto para que a falha de uma consulta cancele as demais em vez de deixá-las rodando à toa.
+**Principle:** Dashboard endpoints frequently aggregate multiple queries that have no mutual data dependencies. Executed sequentially, total endpoint latency is the sum of all queries; executed in parallel, latency equals the single slowest query. Parallel execution must propagate request context so that failure or client cancellation in one query immediately aborts the remaining running queries.
 
-*Em Go, com `golang.org/x/sync/errgroup`:*
+*In Go, utilizing `golang.org/x/sync/errgroup`:*
 ```go
 g, gctx := errgroup.WithContext(ctx)
 
@@ -167,7 +167,7 @@ var (
 
 g.Go(func() error {
     var err error
-    // gctx: se outra goroutine falhar, esta query é cancelada no banco.
+    // gctx: if another goroutine in the group fails, this database query is cancelled immediately.
     metrics, err = s.repo.GetMetrics(gctx, storeID)
     return err
 })
@@ -182,30 +182,30 @@ if err := g.Wait(); err != nil {
     return nil, err
 }
 ```
-Equivalentes: `Promise.all` com `AbortController` no Node, `asyncio.gather` com `TaskGroup` no Python, `CompletableFuture.allOf` na JVM.
+Equivalents: `Promise.all` with `AbortController` in Node.js/TypeScript, `asyncio.gather` with `TaskGroup` in Python, `CompletableFuture.allOf` on the JVM.
 
-> Cuidado com o efeito no pool: N consultas paralelas por requisição consomem N conexões simultâneas. Um dashboard com 6 queries paralelas e 20 requisições concorrentes já estoura um pool de 20.
+> ⚠️ **Connection Pool Impact:** Executing $N$ parallel queries per incoming HTTP request consumes $N$ simultaneous database connections. A dashboard firing 6 parallel queries under 20 concurrent requests will instantly saturate a connection pool of 20. Ensure pool sizes and query concurrency are balanced.
 
 ---
 
-## 5. Cache Condicional HTTP via ETag (`304 Not Modified`)
+## 5. HTTP Conditional Caching via ETag (`304 Not Modified`)
 
-**Princípio:** para endpoints sob polling frequente (agenda que atualiza sozinha, contador de notificações), calcule primeiro um *fingerprint* barato do resultado. Se bater com o `If-None-Match` do cliente, responda 304 sem executar a consulta pesada, sem instanciar structs e sem serializar JSON.
+**Principle:** For high-frequency polling endpoints (e.g., auto-refreshing schedules, notification badges), compute a lightweight query fingerprint first. If the computed fingerprint matches the client's `If-None-Match` header, respond immediately with `304 Not Modified` without executing the full heavy query, instantiating domain models, or serializing JSON payloads.
 
-> ⚠️ **Requisito de banco:** o fingerprint exige índice composto cobrindo filtro e ordenação, ex: `(store_id, updated_at DESC)`. Sem ele, o `MAX(updated_at)` vira Sequential Scan a cada ciclo de polling — a "otimização" fica mais cara que a consulta original.
+> ⚠️ **Database Index Requirement:** The fingerprint query requires a composite index covering filters and timestamp ordering, e.g., `(store_id, updated_at DESC)`. Without this index, `MAX(updated_at)` performs a full sequential scan on every polling interval — making the "optimization" more expensive than the original query.
 
-**Fingerprint:**
+**Fingerprint Query:**
 ```sql
 SELECT COUNT(*), COALESCE(MAX(updated_at), '1970-01-01'::timestamptz)
 FROM appointments
 WHERE store_id = $1;
 ```
 
-### ⚠️ O ETag precisa incluir TODOS os parâmetros que mudam a resposta
+### ⚠️ The ETag Must Include All Response Discriminators
 
-Este é o erro mais fácil de cometer: gerar o ETag só com `count` e `max_updated_at`. Esses dois valores são **idênticos entre páginas e filtros diferentes da mesma tabela** — então o servidor devolve 304 quando o cliente pede a página 2, e o cliente continua exibindo a página 1. O bug é silencioso e parece "a paginação não funciona às vezes".
+A critical pitfall is generating the ETag solely from `count` and `max_updated_at`. Those two metrics are **identical across different pagination offsets and filter parameters for the same dataset** — causing the server to return 304 when the client requests page 2, leaving the user viewing page 1 data.
 
-A chave do ETag deve conter o fingerprint **e** tudo que discrimina a resposta: view, limite, offset, filtros aplicados.
+The ETag key must concatenate the revision fingerprint **plus** every parameter that discriminates the response payload (view mode, limit, offset, active filters):
 
 ```go
 func buildAppointmentListETag(viewKey string, f Filters, rev Revision) string {
@@ -216,9 +216,9 @@ func buildAppointmentListETag(viewKey string, f Filters, rev Revision) string {
 }
 ```
 
-### ⚠️ `If-None-Match` é uma lista, não um valor único
+### ⚠️ `If-None-Match` Is a List, Not a Single Scalar
 
-O header pode legitimamente trazer vários validators separados por vírgula, ou `*`. Comparar com `==` direto faz o 304 simplesmente parar de acontecer nesses casos — a otimização se desliga sozinha sem erro nenhum.
+HTTP specifications allow clients and proxies to provide comma-separated validator lists or `*`. Direct equality comparison (`==`) causes 304 responses to fail silently in these scenarios.
 
 ```go
 func ifNoneMatchMatches(ifNoneMatch, etag string) bool {
@@ -237,7 +237,7 @@ func ifNoneMatchMatches(ifNoneMatch, etag string) bool {
 }
 ```
 
-**No handler:**
+**Handler Implementation:**
 ```go
 etag := buildAppointmentListETag(viewKey, filters, rev)
 c.Header("ETag", etag)
@@ -253,19 +253,19 @@ data, err := h.service.GetAppointments(c.Request.Context(), filters)
 c.JSON(http.StatusOK, data)
 ```
 
-> **Quando NÃO usar este padrão.** O fingerprint prévio custa uma consulta extra: em cache miss, são 2 queries em vez de 1. Vale a pena só quando a taxa de acerto é alta — polling periódico sobre dados que mudam pouco. Em listagens navegadas manualmente ou dados que mudam a cada requisição, faça a consulta única e calcule o ETag a partir do payload já obtido.
+> **When NOT to use this pattern:** Computing a prior fingerprint incurs an extra database query: on a cache miss, 2 queries execute instead of 1. This pattern is only beneficial when the cache hit ratio is high (periodic background polling on slowly changing data). For user-navigated listings or rapidly changing datasets, execute the single query and derive the ETag from the retrieved payload.
 
 ---
 
-## 6. Índices Estratégicos (exemplo em PostgreSQL)
+## 6. Strategic Indexing (PostgreSQL Example)
 
-### A. `CONCURRENTLY` em bases com tráfego
+### A. `CONCURRENTLY` on Production Databases
 
-**Princípio:** `CREATE INDEX` comum toma lock exclusivo de escrita na tabela pelo tempo da construção. Numa tabela ativa, isso é uma janela de indisponibilidade. `CONCURRENTLY` constrói sem bloquear escritas.
+**Principle:** Standard `CREATE INDEX` acquires an exclusive `SHARE` lock on the target table, blocking all concurrent write operations for the duration of the build. On active production tables, this causes downtime. `CONCURRENTLY` builds the index without blocking writes.
 
-> ⚠️ **`CREATE INDEX CONCURRENTLY` não roda dentro de um bloco de transação** — e a maioria dos migradores envolve cada migration numa transação por padrão. Sem desativar isso explicitamente, a migration falha com `CREATE INDEX CONCURRENTLY cannot run inside a transaction block`. É o erro nº 1 ao adotar este padrão.
+> ⚠️ **`CREATE INDEX CONCURRENTLY` cannot run inside a transaction block** — yet most database migration runners wrap each migration file in a transaction by default. Unless explicitly disabled, the migration fails with: `CREATE INDEX CONCURRENTLY cannot run inside a transaction block`.
 
-*Com goose:*
+*Using goose:*
 ```sql
 -- +goose Up
 -- +goose NO TRANSACTION
@@ -277,45 +277,45 @@ CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_active_email
 -- +goose Down
 DROP INDEX CONCURRENTLY IF EXISTS idx_users_active_email;
 ```
-*Equivalentes:* `disable_ddl_transaction!` no Rails; `atomic = False` na Migration do Django; `transaction := false` no golang-migrate (arquivo `.sql` sem wrapper); no Flyway, `CREATE INDEX CONCURRENTLY` exige script marcado como não-transacional.
+*Equivalents:* `disable_ddl_transaction!` in Ruby on Rails; `atomic = False` in Django migrations; `transaction := false` in golang-migrate; Flyway requires migrations using `CONCURRENTLY` to be configured as non-transactional.
 
-> Uma criação com `CONCURRENTLY` que falha no meio deixa um índice **inválido** na tabela, que continua ocupando espaço e não é usado pelo planner. Depois de uma migration falha, verifique com `SELECT indexrelid::regclass FROM pg_index WHERE NOT indisvalid;` e dropar antes de tentar de novo.
+> A failed `CONCURRENTLY` build leaves an **invalid** index on the table, consuming disk space while remaining unused by the query planner. Clean up failed indexes before retrying: `SELECT indexrelid::regclass FROM pg_index WHERE NOT indisvalid;`.
 
-### B. Índices parciais (`WHERE ...`)
-Indexe só a fatia realmente consultada. O índice fica menor, cabe em memória e permanece lá.
+### B. Partial Indexes (`WHERE ...`)
+Index only the specific subset of rows frequently queried. Partial indexes remain smaller, fit in memory buffers, and reduce write overhead.
 ```sql
--- Só agendamentos sem usuário registrado (convidados/avulsos)
+-- Index only appointments from guest/unregistered users
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_appointments_guest_phone
   ON appointments (customer_phone)
   WHERE customer_user_id IS NULL;
 ```
-O planner só usa o índice parcial se o `WHERE` da consulta for **provavelmente implicado** pelo predicado do índice — a condição precisa aparecer na query.
+The query planner only utilizes a partial index if the query's `WHERE` clause logically implies the index predicate.
 
-### C. Índices funcionais / expression indexes
-Aceleram buscas sobre valor normalizado sem coluna redundante. A expressão precisa ser estritamente `IMMUTABLE`.
+### C. Functional / Expression Indexes
+Accelerate searches over normalized values without adding redundant table columns. The indexed expression must be strictly `IMMUTABLE`.
 ```sql
--- Busca por telefone ignorando pontuação
+-- Search users by digits-only phone numbers ignoring formatting
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_phone_digits
   ON users (regexp_replace(phone, '\D', '', 'g'))
   WHERE phone IS NOT NULL;
 ```
-A consulta precisa repetir a expressão **exatamente** como no índice para que o planner o utilize.
+The querying SQL statement must reproduce the exact expression used in the index definition for the planner to utilize it.
 
 ---
 
-## 7. Observabilidade de Latência sem Explosão de Cardinalidade
+## 7. Latency Observability Without Cardinality Explosion
 
-**Princípio:** cada combinação distinta de labels num histograma Prometheus cria uma série temporal nova. Usar o caminho bruto da URL como label (`/stores/9a8b7c/appointments`) gera uma série por UUID — a cardinalidade cresce com o número de registros do produto até esgotar a memória do servidor de métricas. Use sempre o **template** da rota, não o caminho concretizado.
+**Principle:** Every unique combination of label values in a Prometheus histogram instantiates a new time series. Using raw URL paths (`/stores/9a8b7c/appointments`) as metric labels creates a time series for every UUID — causing memory consumption to grow linearly with database records until the metrics server runs out of memory. Always record the **route template**, never the parameterized raw path.
 
 ```go
-// Em Gin, c.FullPath() retorna o template: "/stores/:store_id/appointments"
+// In Gin, c.FullPath() returns the parameterized route template: "/stores/:store_id/appointments"
 path := c.FullPath()
 if path == "" {
-    path = "unmatched" // requisições sem rota casada não viram label livre
+    path = "unmatched" // Unmatched 404 requests must not generate unbounded arbitrary labels
 }
 
 httpRequestDuration.WithLabelValues(c.Request.Method, path, statusStr).Observe(duration.Seconds())
 ```
-Equivalentes: `req.route.path` no Express, `request.url_rule.rule` no Flask, `route.path_format` no FastAPI/Starlette.
+Equivalents: `req.route.path` in Express, `request.url_rule.rule` in Flask, `route.path_format` in FastAPI/Starlette.
 
-> O fallback `"unmatched"` não é detalhe: sem ele, requisições a rotas inexistentes (incluindo varredura automatizada por URLs aleatórias) viram labels de cardinalidade ilimitada — é um vetor de exaustão de memória acionável de fora.
+> The `"unmatched"` fallback is essential: without it, requests to non-existent endpoints (including vulnerability scanners and bot probes hitting random URLs) generate unbounded label cardinality — exposing an external memory exhaustion attack vector.

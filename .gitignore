@@ -14,3 +14,10 @@ build/
 .cache/
 *.swp
 *~
+
+# Python caches
+__pycache__/
+*.py[cod]
+
+# Local audit state
+.clube/

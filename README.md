@@ -1,9 +1,28 @@
+<div align="center">
+
 # Clube Marketplace
 
-Centralized multi-harness AI marketplace for skills, agents, commands, and workflows tailored for Clube projects.
+**Centralized multi-harness AI marketplace for skills, agents, commands, and workflows tailored for Clube SaaS products.**
 
-Supported hosts include **Claude Code**, **Cursor**, **Codex**, and **Oh My Pi (OMP)**.
-Each host reads its native marketplace catalog from the root (`.claude-plugin/`, `.cursor-plugin/`, `.agents/plugins/`, `.omp-plugin/`), consuming plugins defined directly under `plugins/`.
+[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](CHANGELOG.md)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Standards](https://img.shields.io/badge/standards-Keep%20a%20Changelog-orange.svg)](CHANGELOG.md)
+
+[English](README.md) | [Português do Brasil](README.pt-BR.md)
+
+</div>
+
+---
+
+## Overview
+
+The **Clube AI Marketplace** provides a unified distribution model for AI coding skills, expert agents, and deterministic audit workflows across heterogeneous AI coding harnesses:
+- **Claude Code** (`.claude-plugin/`)
+- **Oh My Pi (OMP)** (`.omp-plugin/`)
+- **Cursor** (`.cursor-plugin/`)
+- **Codex / OpenAI Agents** (`.agents/plugins/`)
+
+Each host reads its native marketplace catalog from the repository root, consuming modular plugins defined under `plugins/` (such as `plugins/clube`).
 
 ---
 
@@ -11,28 +30,37 @@ Each host reads its native marketplace catalog from the root (`.claude-plugin/`,
 
 ```
 clube-marketplace/
-├── .claude-plugin/marketplace.json     # Claude Code marketplace catalog
-├── .omp-plugin/marketplace.json        # Oh My Pi marketplace catalog
-├── .cursor-plugin/marketplace.json     # Cursor marketplace catalog
-├── .agents/plugins/marketplace.json    # Codex / OpenAI Agents marketplace catalog
-├── Makefile                            # Top-level operational targets (check, sync, init)
-├── AGENTS.md                           # Authoritative AI instructions & project profile
+├── .claude-plugin/marketplace.json     # Claude Code marketplace catalog (v0.1.0)
+├── .omp-plugin/marketplace.json        # Oh My Pi marketplace catalog (v0.1.0)
+├── .cursor-plugin/marketplace.json     # Cursor marketplace catalog (v0.1.0)
+├── .agents/plugins/marketplace.json    # Codex marketplace catalog (v0.1.0)
+├── Makefile                            # Operational targets (check, audit, sync, init)
+├── AGENTS.md                           # Canonical instructions & Project Profile
 ├── CLAUDE.md                           # Pointer -> @AGENTS.md
 ├── GEMINI.md                           # Pointer -> @AGENTS.md
 ├── .cursorrules                        # Pointer -> @AGENTS.md
 ├── bin/
-│   └── clube-config                    # Marketplace health check & CLI helper
+│   └── clube-config                    # Unified CLI tool & harness integrity checker
 ├── scripts/
-│   ├── lib-harness.sh                  # Host harness detection
-│   ├── lib-runlog.sh                   # Structured event logging
+│   ├── lib-harness.sh                  # Host harness detection engine
+│   ├── lib-runlog.sh                   # Structured event logging utilities
 │   └── sync-harness-configs.sh         # Pointer synchronizer (@AGENTS.md)
+├── .clube/
+│   └── audit-last.json                 # Structured audit runlog & persistent state
 └── plugins/
-    └── clube/                          # Core Clube plugin
+    └── clube/                          # Core Clube plugin (v0.1.0)
         ├── .claude-plugin/plugin.json
         ├── .cursor-plugin/plugin.json
         ├── .codex-plugin/plugin.json
         ├── .omp-plugin/plugin.json
-        ├── commands/                   # Slash commands (/init, /omp-setup, /help)
+        ├── scripts/                    # Deterministic audit runners & ASCII UI engine
+        │   ├── ui.py                   # ASCII box headers, badges, tables & health bars
+        │   ├── audit-all.py            # Unified 360° audit runner
+        │   ├── audit-privacy.py        # LGPD/PII static checker
+        │   ├── audit-performance.py    # Chunk recovery & runtime resilience checker
+        │   ├── audit-seo.py            # SEO & LLM discovery (/llms.txt) checker
+        │   └── audit-tracking.py       # Cookies & Meta CAPI deduplication checker
+        ├── commands/                   # Slash commands (/audit, /init, /help, etc.)
         ├── skills/                     # Modular skills (skills/<name>/SKILL.md)
         └── agents/                     # Named expert subagents
 ```
@@ -52,10 +80,10 @@ clube-marketplace/
 /marketplace add https://github.com/clubedepontos/clube-marketplace
 /marketplace install --scope project clube@clube
 ```
-*Note: If using custom agents on OMP, run `/clube:omp-setup` once to configure agent model overrides.*
+*Note: If using custom agents on OMP, run `/clube:omp-setup` once to configure model overrides.*
 
 ### Cursor
-Add as a Team marketplace via Dashboard → Plugins, or symlink for local development:
+Add as a Team marketplace via **Settings → Plugins**, or symlink for local development:
 ```bash
 mkdir -p ~/.cursor/plugins/local
 ln -s "$(pwd)/plugins/clube" ~/.cursor/plugins/local/clube
@@ -74,23 +102,11 @@ codex plugin install clube --source clube
 | Skill | Focus |
 | :--- | :--- |
 | `clube:init` | Guided project onboarding & `Project Profile` generation in `AGENTS.md` and `CLAUDE.md`. |
-| `clube:fullstack-performance-resilience` | Runtime optimization (Node/Bun/Go/Python), deploy resilience, chunk recovery, and database query tuning. |
-| `clube:saas-seo-geo` | Technical SEO and Generative Engine Optimization (GEO) for SaaS and landing pages. |
-| `clube:marketing-attribution-analytics` | End-to-end tracking, attribution models, and marketing metric instrumentation. |
-| `clube:data-privacy-observability` | PII/LGPD compliance in logs, APM, traces, telemetry, and error tracking. |
-
----
-
-## Core Principles
-
-1. **Single Source of Truth (`AGENTS.md`):** Target projects declare their configuration once inside `AGENTS.md`. All other harness files (`CLAUDE.md`, `GEMINI.md`, `.cursorrules`) reference `@AGENTS.md`.
-2. **Modular Directory Isolation:** Every skill is stored as `plugins/<plugin>/skills/<name>/SKILL.md`. Flat markdown skills are rejected by `make check`.
-3. **Product-Agnostic Process:** Skills encapsulate process and discipline; repository-specific facts (paths, CI commands, branch conventions, connection profiles) are dynamically resolved from the target project's `Project Profile`.
-4. **4-Phase Output Contract:** Every command and skill follows the standardized format:
-   - `### 1. Plan`
-   - `### 2. Execution`
-   - `### 3. Summary`
-   - `### 4. Recommended Actions`
+| `clube:clube-architecture` | Architectural constitution and engineering discipline (5 core pillars: multi-harness modular plugins, hybrid audit architecture, 4-phase output contract, runlog persistence, SemVer parity). |
+| `clube:fullstack-performance-resilience` | Runtime optimization (Node/Bun/Go/Python), deploy resilience, chunk recovery (`vite:preloadError`, `router.onError`), CDN cache headers (`immutable`), container cgroups (`automaxprocs`), and database query tuning. |
+| `clube:saas-seo-geo` | Technical SEO and Generative Engine Optimization (GEO) for SaaS, strict LP vs App separation (`noindex`), metadata/OpenGraph, Schema.org JSON-LD, and `/llms.txt` specifications. |
+| `clube:marketing-attribution-analytics` | End-to-end tracking, attribution models, root domain first-touch cookies, Meta CAPI deduplication via `event_id`, and `acquisition_context JSONB` persistence. |
+| `clube:data-privacy-observability` | PII/LGPD compliance in logs, APM, traces, telemetry, "log the shape, not the data", masking helpers, prohibiting blind struct serialization (`%+v`, `zap.Any`), and error scrubbing. |
 
 ---
 
@@ -98,19 +114,55 @@ codex plugin install clube --source clube
 
 | Slash Command | Focus |
 | :--- | :--- |
-| `/clube:audit` (or `/audit`) | Unified 360° SaaS production readiness audit across all 4 pillars. |
-| `/clube:audit-privacy` | Audits blind struct logging, PII in query strings, and metric cardinality. |
-| `/clube:audit-performance` | Audits SPA chunk recovery (404 prevention), CDN cache headers, and container limits. |
-| `/clube:audit-seo` | Audits `/llms.txt`, private route indexing protection, and Schema.org structured data. |
-| `/clube:audit-tracking` | Audits root domain cookies, Meta CAPI deduplication, and acquisition context. |
-| `/clube:init` | Guided project onboarding and `Project Profile` generation in `AGENTS.md` and `CLAUDE.md`. |
-| `/clube:help` | Lists available commands, skills, and core engineering principles. |
+| `/clube:audit` (or `/audit`) | Unified 360° SaaS production readiness audit across all 4 engineering pillars (Privacy, Performance, SEO/GEO, Tracking). |
+| `/clube:audit-privacy` | Audits blind struct logging, PII in query strings, unmasked domain logs, and metric cardinality. |
+| `/clube:audit-performance` | Audits SPA chunk recovery (404 prevention), CDN cache headers, connection pools, and container limits. |
+| `/clube:audit-seo` | Audits `/llms.txt`, private route indexing protection (`noindex`), OpenGraph tags, and Schema.org structured data. |
+| `/clube:audit-tracking` | Audits root domain cookies, Meta CAPI deduplication (`event_id`), and database acquisition context. |
+| `/clube:init` (or `/init`, `$init`) | Guided project onboarding, database connection preflights, agent role mapping, and Project Profile generation. |
+| `/clube:omp-setup` | (OMP only) Configures model overrides for plugin agents to ensure seamless subagent dispatch. |
+| `/clube:help` (or `/help`) | Displays complete overview of commands, skills, and core engineering principles. |
 
 ---
 
-## Operational Commands
+## Operational CLI & Makefile Commands
 
-- `make check` — Audits active harness, marketplace catalogs, and plugin integrity.
-- `make audit` — Runs 360° production audit (privacy, performance, SEO/GEO, tracking) via fast deterministic static scripts.
-- `make sync` — Synchronizes harness pointer files (`@AGENTS.md`) across subdirectories.
-- `make init` — Runs project AI onboarding and harness configuration.
+The repository includes a dedicated CLI helper (`bin/clube-config`) and `Makefile` targets:
+
+```bash
+# Audit active harness detection, marketplace catalogs, and plugin integrity
+make check
+./bin/clube-config check
+
+# Run deterministic 360° SaaS production readiness audit
+make audit
+./bin/clube-config audit [all|privacy|performance|seo|tracking]
+
+# Synchronize harness pointer files (@AGENTS.md) across subdirectories
+make sync
+./bin/clube-config sync [DIR]
+
+# Initialize project AI configuration and sync harness pointers
+make init
+./bin/clube-config init [DIR]
+
+# Install clube-config CLI into ~/.local/bin
+make install-cli
+./bin/clube-config install
+```
+
+---
+
+## Core Architectural Principles
+
+The Clube AI Marketplace is governed by the **5 Mandatory Pillars** defined in `clube:clube-architecture`:
+
+1. **Multi-Harness Modular Plugin Standard:** All AI harnesses (Claude Code, Cursor, Codex, Oh My Pi) consume modular plugins from `plugins/<name>/` via root marketplace catalogs.
+2. **Hybrid Audit Architecture:** Deterministic Python static scripts (`plugins/clube/scripts/`) execute baseline checks fast, persist structured state in `.clube/audit-last.json`, and feed LLM slash commands with concrete evidence.
+3. **4-Phase Output Contract:** Every command, skill, and AI workflow adheres to the strict 4-phase contract:
+   - `### 1. Plan`
+   - `### 2. Execution`
+   - `### 3. Summary`
+   - `### 4. Recommended Actions`
+4. **Structured Runlog & State Persistence:** Automated audits record structured execution artifacts in `.clube/audit-last.json` with visual terminal rendering (ASCII tables, health bars, badges).
+5. **SemVer Parity & Bilingual Documentation:** All 9 manifest files strictly declare identical SemVer versions (`0.1.0`), accompanied by complete bilingual documentation parity in English (`README.md`, `CHANGELOG.md`) and Brazilian Portuguese (`README.pt-BR.md`, `CHANGELOG.pt-BR.md`).
