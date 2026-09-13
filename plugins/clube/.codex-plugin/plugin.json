@@ -1,7 +1,7 @@
 {
   "name": "clube",
-  "version": "1.0.0",
-  "description": "Clube AI engineering workflow, stack-expert skills, and guided init for Clube projects.",
+  "version": "1.1.0",
+  "description": "Clube AI engineering workflows, SaaS optimization, performance, SEO/GEO, analytics, privacy, and guided init.",
   "author": {
     "name": "Clube",
     "email": "contato@clube.com.br",
@@ -14,6 +14,14 @@
     "clube",
     "marketplace",
     "workflow",
+    "performance",
+    "resilience",
+    "seo",
+    "geo",
+    "analytics",
+    "attribution",
+    "privacy",
+    "data-apps",
     "skills",
     "agents"
   ],
@@ -22,14 +30,14 @@
   "agents": "./agents/",
   "interface": {
     "displayName": "Clube",
-    "shortDescription": "Clube engineering workflow and stack-expert skills",
-    "longDescription": "Orchestrates Clube engineering workflow, AGENTS.md single source of truth, and stack-expert skills.",
+    "shortDescription": "Clube engineering workflows, performance, SEO/GEO, and analytics skills",
+    "longDescription": "Clube engineering workflows, AGENTS.md single source of truth, performance, deploy resilience, SaaS SEO/GEO, marketing attribution, and data privacy observability.",
     "developerName": "Clube",
     "category": "Developer Tools",
     "websiteURL": "https://github.com/clube/clube-marketplace",
     "defaultPrompt": [
       "Initialize this project with clube:init",
-      "Check configuration status with clube:check-status"
+      "Optimize frontend performance with clube:fullstack-performance-resilience"
     ]
   }
 }
