@@ -4,7 +4,7 @@
 
 **Marketplace centralizado e multi-harness de IA para skills, agentes, comandos e fluxos de trabalho sob medida para os produtos SaaS do Clube.**
 
-[![Versão](https://img.shields.io/badge/versão-0.1.0-blue.svg)](CHANGELOG.pt-BR.md)
+[![Versão](https://img.shields.io/badge/versão-0.2.0-blue.svg)](CHANGELOG.pt-BR.md)
 [![Licença](https://img.shields.io/badge/licença-MIT-green.svg)](LICENSE)
 [![Padrões](https://img.shields.io/badge/padrões-Keep%20a%20Changelog-orange.svg)](CHANGELOG.pt-BR.md)
 
@@ -30,10 +30,10 @@ Cada host lê seu catálogo nativo de marketplace a partir da raiz do repositór
 
 ```
 clube-marketplace/
-├── .claude-plugin/marketplace.json     # Catálogo do marketplace para Claude Code (v0.1.0)
-├── .omp-plugin/marketplace.json        # Catálogo do marketplace para Oh My Pi (v0.1.0)
-├── .cursor-plugin/marketplace.json     # Catálogo do marketplace para Cursor (v0.1.0)
-├── .agents/plugins/marketplace.json    # Catálogo do marketplace para Codex (v0.1.0)
+├── .claude-plugin/marketplace.json     # Catálogo do marketplace para Claude Code (v0.2.0)
+├── .omp-plugin/marketplace.json        # Catálogo do marketplace para Oh My Pi (v0.2.0)
+├── .cursor-plugin/marketplace.json     # Catálogo do marketplace para Cursor (v0.2.0)
+├── .agents/plugins/marketplace.json    # Catálogo do marketplace para Codex (v0.2.0)
 ├── Makefile                            # Alvos operacionais (check, audit, sync, init)
 ├── AGENTS.md                           # Instruções canônicas e Project Profile
 ├── CLAUDE.md                           # Ponteiro -> @AGENTS.md
@@ -48,7 +48,7 @@ clube-marketplace/
 ├── .clube/
 │   └── audit-last.json                 # Runlog estruturado de auditoria e estado persistente
 └── plugins/
-    └── clube/                          # Plugin principal do Clube (v0.1.0)
+    └── clube/                          # Plugin principal do Clube (v0.2.0)
         ├── .claude-plugin/plugin.json
         ├── .cursor-plugin/plugin.json
         ├── .codex-plugin/plugin.json
@@ -61,8 +61,23 @@ clube-marketplace/
         │   ├── audit-seo.py            # Verificador de SEO e LLM discovery (/llms.txt)
         │   └── audit-tracking.py       # Verificador de cookies e deduplicação Meta CAPI
         ├── commands/                   # Comandos slash (/audit, /init, /help, etc.)
-        ├── skills/                     # Skills modulares (skills/<name>/SKILL.md)
-        └── agents/                     # Subagentes especialistas nomeados
+        ├── agents/                     # Subagentes especialistas nomeados
+        │   ├── expert-seo.md           # SEO técnico, GEO e Schema.org JSON-LD
+        │   ├── expert-tracking.md      # Atribuição, Meta CAPI e cookies no domínio raiz
+        │   ├── expert-privacy.md       # LGPD/GDPR, máscara de PII e higienização Sentry
+        │   ├── expert-performance.md   # Recuperação de chunks SPA, cache e tuning
+        │   └── clube-auditor.md        # Coordenador de auditoria 360° (somente leitura)
+        └── skills/                     # Skills modulares de divulgação progressiva
+            ├── clube-architecture/     # 5 pilares fundamentais e constituição de engenharia
+            ├── init/                   # Onboarding e Project Profile
+            ├── saas-seo-geo/           # SEO técnico, GEO e /llms.txt
+            │   └── references/         # Schemas profundos, DDLs e guias de crawling
+            ├── marketing-attribution-analytics/ # Atribuição, CAPI e cookies
+            │   └── references/         # Payloads CAPI, higiene de cookies e DDLs
+            ├── data-privacy-observability/      # LGPD/GDPR, PII e telemetria
+            │   └── references/         # Funções de máscara, higienização Sentry e DDLs
+            └── fullstack-performance-resilience/# Recuperação de chunks, cache e tuning
+                └── references/         # Recuperação Vite, headers de borda e índices DB
 ```
 
 ---
@@ -97,17 +112,32 @@ codex plugin install clube --source clube
 
 ---
 
+## Agentes Especialistas de IA (`plugins/clube/agents`)
+
+O Clube fornece 5 agentes especialistas de primeira classe declarados com contratos estritos de frontmatter YAML, roteamento de capacidades abstratas (`reasoning`, `code`, `critique`) e permissões de ferramentas escopadas:
+
+| Agente | Classe de Capacidade | Ferramentas | Foco e Responsabilidades Principais |
+| :--- | :--- | :--- | :--- |
+| `expert-seo` | `reasoning` / `code` | Read, Write, Edit, Grep, Glob, Bash | SEO técnico, Generative Engine Optimization (GEO), Schema.org JSON-LD, descoberta via `/llms.txt` e `/llms-full.txt`, tags OpenGraph e limites estritos de indexação (`noindex` na aplicação autenticada). |
+| `expert-tracking` | `code` / `reasoning` | Read, Write, Edit, Grep, Glob, Bash | Atribuição de marketing, Meta Pixel no navegador e Conversions API (CAPI) no servidor, deduplicação via `event_id`, higiene de cookies primários no domínio raiz e persistência de `acquisition_context` JSONB no banco de dados. |
+| `expert-privacy` | `reasoning` / `code` | Read, Write, Edit, Grep, Glob, Bash | Conformidade LGPD/GDPR, princípio de "log do formato, não do dado", mascaramento determinístico de PII (CPF, e-mail, telefone), higienização de payloads de erro no Sentry e logs de auditoria. |
+| `expert-performance` | `code` / `reasoning` | Read, Write, Edit, Grep, Glob, Bash | Performance fullstack, recuperação de chunks SPA (`vite:preloadError`, `router.onError` com proteção contra loop infinito de recarga), headers de cache CDN (`immutable`), tuning de cgroups em containers (`automaxprocs`) e otimização de queries de banco. |
+| `clube-auditor` | `reasoning` / `critique` | Read, Grep, Glob, Bash *(somente leitura)* | Coordenador de prontidão para produção 360° (somente leitura), executando scripts detectores determinísticos em Python, analisando `.clube/audit-last.json`, priorizando achados e sintetizando relatórios de correção em 4 fases. |
+
+---
+
 ## Skills Inclusas (`plugins/clube`)
 
-| Skill | Foco |
-| :--- | :--- |
-| `clube:init` | Onboarding guiado de projetos e geração do `Project Profile` em `AGENTS.md` e `CLAUDE.md`. |
-| `clube:clube-architecture` | Constituição de engenharia e disciplina arquitetural (5 pilares fundamentais: plugins modulares multi-harness, arquitetura híbrida de auditoria, contrato de saída em 4 fases, persistência de runlog, paridade SemVer). |
-| `clube:fullstack-performance-resilience` | Otimização de runtime (Node/Bun/Go/Python), resiliência de deploy, recuperação de chunks SPA (`vite:preloadError`, `router.onError`), headers de cache CDN (`immutable`), cgroups em containers (`automaxprocs`) e tuning de queries de banco. |
-| `clube:saas-seo-geo` | SEO técnico e Generative Engine Optimization (GEO) para SaaS, separação estrita de LP vs App (`noindex`), tags de metadados/OpenGraph, Schema.org JSON-LD e especificações de `/llms.txt`. |
-| `clube:marketing-attribution-analytics` | Rastreamento ponta a ponta, modelos de atribuição, cookies primários de first-touch no domínio raiz, deduplicação Meta CAPI via `event_id` e persistência de `acquisition_context JSONB`. |
-| `clube:data-privacy-observability` | Conformidade LGPD/PII em logs, APM, traces, telemetria, princípio de "log do formato, não do dado", funções auxiliares de mascaramento, proibição de serialização cega de structs (`%+v`, `zap.Any`) e higienização de erros. |
+Todas as skills verticais de SaaS seguem a **Arquitetura de Divulgação Progressiva**, apresentando pontos de entrada de ativação enxutos (`SKILL.md` < 100 linhas) suportados por 15 guias de referência temática abrangentes em `references/`:
 
+| Skill | Guias de Referência | Foco |
+| :--- | :--- | :--- |
+| `clube:init` | — | Onboarding guiado de projetos e geração do `Project Profile` em `AGENTS.md` e `CLAUDE.md`. |
+| `clube:clube-architecture` | — | Constituição de engenharia e disciplina arquitetural (5 pilares fundamentais: plugins modulares multi-harness, arquitetura híbrida de auditoria, contrato de saída em 4 fases, persistência de runlog, paridade SemVer). |
+| `clube:saas-seo-geo` | `meta-social.md`<br>`json-ld-schemas.md`<br>`geo-llmstxt.md`<br>`crawling-sitemaps.md` | SEO técnico e Generative Engine Optimization (GEO) para SaaS, separação estrita de LP vs App (`noindex`), tags de metadados/OpenGraph, Schema.org JSON-LD e especificações de `/llms.txt`. |
+| `clube:marketing-attribution-analytics` | `first-touch-cookies.md`<br>`deduplication-hygiene.md`<br>`server-side-capi.md`<br>`database-attribution.md` | Rastreamento ponta a ponta, modelos de atribuição, cookies primários de first-touch no domínio raiz, deduplicação Meta CAPI via `event_id` e persistência de `acquisition_context JSONB`. |
+| `clube:data-privacy-observability` | `pii-masking-shape.md`<br>`sentry-observability-scrubbing.md`<br>`compliance-retention.md` | Conformidade LGPD/PII em logs, APM, traces, telemetria, princípio de "log do formato, não do dado", funções auxiliares de mascaramento, proibição de serialização cega de structs (`%+v`, `zap.Any`) e higienização de erros. |
+| `clube:fullstack-performance-resilience` | `chunk-recovery.md`<br>`caching-edge-headers.md`<br>`runtime-tuning.md`<br>`db-indexing-queries.md` | Otimização de runtime (Node/Bun/Go/Python), resiliência de deploy, recuperação de chunks SPA (`vite:preloadError`, `router.onError`), headers de cache CDN (`immutable`), cgroups em containers (`automaxprocs`) e tuning de queries de banco. |
 ---
 
 ## Comandos Slash
@@ -165,4 +195,4 @@ O Clube AI Marketplace é regido pelos **5 Pilares Obrigatórios** definidos na 
    - `### 3. Summary`
    - `### 4. Recommended Actions`
 4. **Persistência de Estado e Runlog Estruturado:** Auditorias automatizadas gravam artefatos estruturados de execução em `.clube/audit-last.json` com renderização visual no terminal (tabelas ASCII, barras de saúde gráfica, badges coloridos).
-5. **Paridade SemVer e Documentação Bilíngue:** Todos os 9 arquivos de manifesto declaram estritamente versões SemVer idênticas (`0.1.0`), acompanhados por paridade completa de documentação bilíngue em Inglês (`README.md`, `CHANGELOG.md`) e Português do Brasil (`README.pt-BR.md`, `CHANGELOG.pt-BR.md`).
+5. **Paridade SemVer e Documentação Bilíngue:** Todos os 9 arquivos de manifesto declaram estritamente versões SemVer idênticas (`0.2.0`), acompanhados por paridade completa de documentação bilíngue em Inglês (`README.md`, `CHANGELOG.md`) e Português do Brasil (`README.pt-BR.md`, `CHANGELOG.pt-BR.md`).

@@ -18,14 +18,28 @@ The **Clube AI Marketplace** provides standardized AI workflows, stack-expert sk
 - `/clube:audit-seo` — Audits `/llms.txt`, private route indexing protection, and Schema.org structured data.
 - `/clube:audit-tracking` — Audits root domain cookies, Meta CAPI deduplication, and acquisition context.
 
+## Available Specialist Agents
+
+| Agent | Capability Class | Scope & Responsibilities |
+| :--- | :--- | :--- |
+| `expert-seo` | `reasoning` / `code` | Technical SEO, Generative Engine Optimization (GEO), Schema.org JSON-LD, `/llms.txt` and `/llms-full.txt` discovery, OpenGraph tags, and strict indexing boundaries (`noindex` on auth app). |
+| `expert-tracking` | `code` / `reasoning` | Marketing attribution, browser Meta Pixel & server-side Conversions API (CAPI), `event_id` deduplication, root-domain first-party cookie hygiene, and `acquisition_context` JSONB database persistence. |
+| `expert-privacy` | `reasoning` / `code` | LGPD/GDPR compliance, "Log the shape, not the data", deterministic PII masking (CPF, email, phone), Sentry error payload scrubbing, and audit logging. |
+| `expert-performance` | `code` / `reasoning` | Fullstack performance, SPA chunk recovery (`vite:preloadError`, `router.onError` with infinite reload guard), CDN edge caching headers (`immutable`), container cgroups tuning (`automaxprocs`), and database query optimization. |
+| `clube-auditor` | `reasoning` / `critique` | 360° production readiness coordinator (read-only), executing deterministic Python detector scripts, parsing `.clube/audit-last.json`, prioritizing findings, and synthesizing 4-phase remediation reports. |
+
 ## Available Skills
 
-- `clube:init` — Guided onboarding and Project Profile setup in `AGENTS.md` and `CLAUDE.md`.
-- `clube:clube-architecture` — Architectural constitution and engineering discipline (5 core pillars: multi-harness modular plugins, hybrid audit architecture, 4-phase output contract, runlog persistence, SemVer parity).
-- `clube:fullstack-performance-resilience` — Runtime optimization (Node/Bun/Go/Python), deploy resilience, chunk recovery (`vite:preloadError`), CDN cache headers, and database query tuning.
-- `clube:saas-seo-geo` — Technical SEO and Generative Engine Optimization (GEO) for SaaS, LLM discoverability (`/llms.txt`), structured data (Schema.org), and landing pages.
-- `clube:marketing-attribution-analytics` — End-to-end tracking, attribution models, Meta CAPI deduplication via `event_id`, and `acquisition_context` database persistence.
-- `clube:data-privacy-observability` — PII/LGPD compliance in logs, APM, traces, telemetry, blind struct logging elimination, and error tracking.
+Skills follow the **Progressive Disclosure Architecture**, featuring lean activation entrypoints (`SKILL.md` < 100 lines) supported by comprehensive topic guides under `references/`:
+
+| Skill | References Guides | Focus |
+| :--- | :--- | :--- |
+| `clube:init` | — | Guided onboarding and `Project Profile` setup in `AGENTS.md` and `CLAUDE.md`. |
+| `clube:clube-architecture` | — | Architectural constitution and engineering discipline (5 core pillars: multi-harness modular plugins, hybrid audit architecture, 4-phase output contract, runlog persistence, SemVer parity). |
+| `clube:saas-seo-geo` | `meta-social.md`, `json-ld-schemas.md`, `geo-llmstxt.md`, `crawling-sitemaps.md` | Technical SEO, GEO for AI engine discovery (`/llms.txt`), structured data (Schema.org JSON-LD), robots.txt rules, and dynamic XML sitemaps. |
+| `clube:marketing-attribution-analytics` | `first-touch-cookies.md`, `deduplication-hygiene.md`, `server-side-capi.md`, `database-attribution.md` | End-to-end marketing attribution, root-domain first-touch cookies, client/server Meta CAPI deduplication via `event_id`, and `acquisition_context` JSONB persistence. |
+| `clube:data-privacy-observability` | `pii-masking-shape.md`, `sentry-observability-scrubbing.md`, `compliance-retention.md` | LGPD/GDPR compliance, PII masking, shape logging ("log the shape, not the data"), Sentry `beforeSend` scrubbing, and retention policies. |
+| `clube:fullstack-performance-resilience` | `chunk-recovery.md`, `caching-edge-headers.md`, `runtime-tuning.md`, `db-indexing-queries.md` | Deploy resilience, SPA chunk recovery (`vite:preloadError`), CDN cache headers (`immutable`), container tuning (`automaxprocs`), and database query indexing. |
 
 ## Core Principles
 

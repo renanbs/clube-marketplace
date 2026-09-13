@@ -4,7 +4,7 @@
 
 **Centralized multi-harness AI marketplace for skills, agents, commands, and workflows tailored for Clube SaaS products.**
 
-[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Standards](https://img.shields.io/badge/standards-Keep%20a%20Changelog-orange.svg)](CHANGELOG.md)
 
@@ -30,10 +30,10 @@ Each host reads its native marketplace catalog from the repository root, consumi
 
 ```
 clube-marketplace/
-├── .claude-plugin/marketplace.json     # Claude Code marketplace catalog (v0.1.0)
-├── .omp-plugin/marketplace.json        # Oh My Pi marketplace catalog (v0.1.0)
-├── .cursor-plugin/marketplace.json     # Cursor marketplace catalog (v0.1.0)
-├── .agents/plugins/marketplace.json    # Codex marketplace catalog (v0.1.0)
+├── .claude-plugin/marketplace.json     # Claude Code marketplace catalog (v0.2.0)
+├── .omp-plugin/marketplace.json        # Oh My Pi marketplace catalog (v0.2.0)
+├── .cursor-plugin/marketplace.json     # Cursor marketplace catalog (v0.2.0)
+├── .agents/plugins/marketplace.json    # Codex marketplace catalog (v0.2.0)
 ├── Makefile                            # Operational targets (check, audit, sync, init)
 ├── AGENTS.md                           # Canonical instructions & Project Profile
 ├── CLAUDE.md                           # Pointer -> @AGENTS.md
@@ -48,7 +48,7 @@ clube-marketplace/
 ├── .clube/
 │   └── audit-last.json                 # Structured audit runlog & persistent state
 └── plugins/
-    └── clube/                          # Core Clube plugin (v0.1.0)
+    └── clube/                          # Core Clube plugin (v0.2.0)
         ├── .claude-plugin/plugin.json
         ├── .cursor-plugin/plugin.json
         ├── .codex-plugin/plugin.json
@@ -61,8 +61,23 @@ clube-marketplace/
         │   ├── audit-seo.py            # SEO & LLM discovery (/llms.txt) checker
         │   └── audit-tracking.py       # Cookies & Meta CAPI deduplication checker
         ├── commands/                   # Slash commands (/audit, /init, /help, etc.)
-        ├── skills/                     # Modular skills (skills/<name>/SKILL.md)
-        └── agents/                     # Named expert subagents
+        ├── agents/                     # Named expert subagents
+        │   ├── expert-seo.md           # Technical SEO, GEO & Schema.org JSON-LD
+        │   ├── expert-tracking.md      # Attribution, Meta CAPI & root-domain cookies
+        │   ├── expert-privacy.md       # LGPD/GDPR, PII masking & Sentry scrubbing
+        │   ├── expert-performance.md   # SPA chunk recovery, caching & runtime tuning
+        │   └── clube-auditor.md        # 360° audit coordinator (read-only)
+        └── skills/                     # Progressive disclosure modular skills
+            ├── clube-architecture/     # 5 core pillars & engineering constitution
+            ├── init/                   # Project Profile onboarding
+            ├── saas-seo-geo/           # Technical SEO, GEO & /llms.txt
+            │   └── references/         # Deep schemas, DDLs & crawling guides
+            ├── marketing-attribution-analytics/ # Attribution, CAPI & cookies
+            │   └── references/         # CAPI payloads, cookie hygiene & DDLs
+            ├── data-privacy-observability/      # LGPD/GDPR, PII & telemetry
+            │   └── references/         # Masking helpers, Sentry scrubbing & DDLs
+            └── fullstack-performance-resilience/# Chunk recovery, caching & tuning
+                └── references/         # Vite recovery, edge headers & DB indexing
 ```
 
 ---
@@ -97,17 +112,32 @@ codex plugin install clube --source clube
 
 ---
 
+## Specialist AI Agents (`plugins/clube/agents`)
+
+Clube provides 5 first-class named specialist agents declared with strict YAML frontmatter contracts, abstract capability routing (`reasoning`, `code`, `critique`), and scoped tool permissions:
+
+| Agent | Capability Class | Tools | Focus & Core Responsibilities |
+| :--- | :--- | :--- | :--- |
+| `expert-seo` | `reasoning` / `code` | Read, Write, Edit, Grep, Glob, Bash | Technical SEO, Generative Engine Optimization (GEO), Schema.org JSON-LD, `/llms.txt` and `/llms-full.txt` discovery, OpenGraph tags, and strict indexing boundaries (`noindex` on auth app). |
+| `expert-tracking` | `code` / `reasoning` | Read, Write, Edit, Grep, Glob, Bash | Marketing attribution, browser Meta Pixel & server-side Conversions API (CAPI), `event_id` deduplication, root-domain first-party cookie hygiene, and `acquisition_context` JSONB database persistence. |
+| `expert-privacy` | `reasoning` / `code` | Read, Write, Edit, Grep, Glob, Bash | LGPD/GDPR compliance, "Log the shape, not the data", deterministic PII masking (CPF, email, phone), Sentry error payload scrubbing, and audit logging. |
+| `expert-performance` | `code` / `reasoning` | Read, Write, Edit, Grep, Glob, Bash | Fullstack performance, SPA chunk recovery (`vite:preloadError`, `router.onError` with infinite reload guard), CDN edge caching headers (`immutable`), container cgroups tuning (`automaxprocs`), and database query optimization. |
+| `clube-auditor` | `reasoning` / `critique` | Read, Grep, Glob, Bash *(readonly)* | 360° production readiness coordinator (read-only), executing deterministic Python detector scripts, parsing `.clube/audit-last.json`, prioritizing findings, and synthesizing 4-phase remediation reports. |
+
+---
+
 ## Included Skills (`plugins/clube`)
 
-| Skill | Focus |
-| :--- | :--- |
-| `clube:init` | Guided project onboarding & `Project Profile` generation in `AGENTS.md` and `CLAUDE.md`. |
-| `clube:clube-architecture` | Architectural constitution and engineering discipline (5 core pillars: multi-harness modular plugins, hybrid audit architecture, 4-phase output contract, runlog persistence, SemVer parity). |
-| `clube:fullstack-performance-resilience` | Runtime optimization (Node/Bun/Go/Python), deploy resilience, chunk recovery (`vite:preloadError`, `router.onError`), CDN cache headers (`immutable`), container cgroups (`automaxprocs`), and database query tuning. |
-| `clube:saas-seo-geo` | Technical SEO and Generative Engine Optimization (GEO) for SaaS, strict LP vs App separation (`noindex`), metadata/OpenGraph, Schema.org JSON-LD, and `/llms.txt` specifications. |
-| `clube:marketing-attribution-analytics` | End-to-end tracking, attribution models, root domain first-touch cookies, Meta CAPI deduplication via `event_id`, and `acquisition_context JSONB` persistence. |
-| `clube:data-privacy-observability` | PII/LGPD compliance in logs, APM, traces, telemetry, "log the shape, not the data", masking helpers, prohibiting blind struct serialization (`%+v`, `zap.Any`), and error scrubbing. |
+All vertical SaaS skills follow the **Progressive Disclosure Architecture**, featuring lean activation entrypoints (`SKILL.md` < 100 lines) supported by 15 comprehensive topic reference guides in `references/`:
 
+| Skill | Topic References | Focus |
+| :--- | :--- | :--- |
+| `clube:init` | — | Guided project onboarding & `Project Profile` generation in `AGENTS.md` and `CLAUDE.md`. |
+| `clube:clube-architecture` | — | Architectural constitution and engineering discipline (5 core pillars: multi-harness modular plugins, hybrid audit architecture, 4-phase output contract, runlog persistence, SemVer parity). |
+| `clube:saas-seo-geo` | `meta-social.md`<br>`json-ld-schemas.md`<br>`geo-llmstxt.md`<br>`crawling-sitemaps.md` | Technical SEO and Generative Engine Optimization (GEO) for SaaS, strict LP vs App separation (`noindex`), metadata/OpenGraph, Schema.org JSON-LD, and `/llms.txt` specifications. |
+| `clube:marketing-attribution-analytics` | `first-touch-cookies.md`<br>`deduplication-hygiene.md`<br>`server-side-capi.md`<br>`database-attribution.md` | End-to-end tracking, attribution models, root domain first-touch cookies, Meta CAPI deduplication via `event_id`, and `acquisition_context JSONB` persistence. |
+| `clube:data-privacy-observability` | `pii-masking-shape.md`<br>`sentry-observability-scrubbing.md`<br>`compliance-retention.md` | PII/LGPD compliance in logs, APM, traces, telemetry, "log the shape, not the data", masking helpers, prohibiting blind struct serialization (`%+v`, `zap.Any`), and error scrubbing. |
+| `clube:fullstack-performance-resilience` | `chunk-recovery.md`<br>`caching-edge-headers.md`<br>`runtime-tuning.md`<br>`db-indexing-queries.md` | Runtime optimization (Node/Bun/Go/Python), deploy resilience, chunk recovery (`vite:preloadError`, `router.onError`), CDN cache headers (`immutable`), container cgroups (`automaxprocs`), and database query tuning. |
 ---
 
 ## Slash Commands
@@ -165,4 +195,4 @@ The Clube AI Marketplace is governed by the **5 Mandatory Pillars** defined in `
    - `### 3. Summary`
    - `### 4. Recommended Actions`
 4. **Structured Runlog & State Persistence:** Automated audits record structured execution artifacts in `.clube/audit-last.json` with visual terminal rendering (ASCII tables, health bars, badges).
-5. **SemVer Parity & Bilingual Documentation:** All 9 manifest files strictly declare identical SemVer versions (`0.1.0`), accompanied by complete bilingual documentation parity in English (`README.md`, `CHANGELOG.md`) and Brazilian Portuguese (`README.pt-BR.md`, `CHANGELOG.pt-BR.md`).
+5. **SemVer Parity & Bilingual Documentation:** All 9 manifest files strictly declare identical SemVer versions (`0.2.0`), accompanied by complete bilingual documentation parity in English (`README.md`, `CHANGELOG.md`) and Brazilian Portuguese (`README.pt-BR.md`, `CHANGELOG.pt-BR.md`).

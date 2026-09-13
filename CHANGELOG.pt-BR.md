@@ -5,6 +5,26 @@ Todas as mudanças notáveis no Clube Marketplace serão documentadas neste arqu
 O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-09-13
+
+### Adicionado
+- **5 Agentes Especialistas de IA Nomeados (`plugins/clube/agents/`):**
+  - `expert-seo`: SEO técnico, Generative Engine Optimization (GEO), Schema.org JSON-LD e `/llms.txt`.
+  - `expert-tracking`: Atribuição de marketing, Meta Pixel & CAPI, deduplicação via `event_id` e higiene de cookies no domínio raiz.
+  - `expert-privacy`: Conformidade LGPD/GDPR, máscara de PII, logging de formato, higienização Sentry e trilhas de auditoria.
+  - `expert-performance`: Performance fullstack, recuperação de chunks SPA, headers de cache CDN e otimização de queries de banco.
+  - `clube-auditor`: Coordenador de prontidão para produção 360° executando detectores determinísticos em Python e sintetizando relatórios em 4 fases.
+- **15 Guias de Referência Temática:** Decomposição das skills verticais de SaaS em guias profundos em subdiretórios `references/` (`meta-social.md`, `json-ld-schemas.md`, `geo-llmstxt.md`, `crawling-sitemaps.md`, `first-touch-cookies.md`, `deduplication-hygiene.md`, `server-side-capi.md`, `database-attribution.md`, `pii-masking-shape.md`, `sentry-observability-scrubbing.md`, `compliance-retention.md`, `chunk-recovery.md`, `caching-edge-headers.md`, `runtime-tuning.md`, `db-indexing-queries.md`).
+- **Validador Automatizado de Agentes e Manifestos:** Atualização de `bin/clube-config check` e `make check` para validar frontmatter YAML de agentes, diretórios de referências de skills e alinhamento de versão dos 9 manifestos em Python 3 stdlib puro.
+
+### Alterado
+- **Refatoração de Skills em Divulgação Progressiva:** Refatoração de 4 skills monolíticas de SaaS (`saas-seo-geo`, `marketing-attribution-analytics`, `data-privacy-observability`, `fullstack-performance-resilience`) em pontos de entrada enxutos de roteamento (`SKILL.md` < 100 linhas).
+- **Alinhamento Sincronizado de Versão em 9 Manifestos:** Sincronização de `package.json`, 4 catálogos raiz de marketplace e 4 manifestos de plugin para `v0.2.0`.
+- **Atualização da Constituição de Arquitetura:** Adição formal da Seção 1.2 (Padrão de Agentes Especialistas Nomeados) e Seção 1.3 (Arquitetura de Divulgação Progressiva de Skills) na skill `clube:clube-architecture`.
+
+### Melhorado
+- **Registro Multi-Harness de Agentes:** Descoberta e registro padronizados de agentes no Claude Code, Cursor, Codex e Oh My Pi.
+
 ## [0.1.0] - 2026-09-13
 
 ### Adicionado

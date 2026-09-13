@@ -110,15 +110,55 @@ cmd_check() {
                 if [ -d "$p/skills" ]; then
                     local valid_skills=0
                     local invalid_skills=0
+                    local total_refs=0
                     for s in "$p/skills"/*; do
                         if [ -d "$s" ] && [ -f "$s/SKILL.md" ]; then
                             valid_skills=$((valid_skills + 1))
+                            local sname
+                            sname="$(basename "$s")"
+                            if [ -d "$s/references" ]; then
+                                local refs
+                                refs=$(find "$s/references" -maxdepth 1 -name "*.md" | wc -l)
+                                total_refs=$((total_refs + refs))
+                            else
+                                case "$sname" in
+                                    saas-seo-geo|marketing-attribution-analytics|fullstack-performance-resilience|data-privacy-observability)
+                                        echo -e "    ⚠️ Missing references/ directory in vertical SaaS skill: $s"
+                                        ;;
+                                esac
+                            fi
                         elif [ -f "$s" ] && [ "${s##*.}" = "md" ]; then
                             invalid_skills=$((invalid_skills + 1))
                             echo -e "    ⚠️ Non-standard flat skill: $s (expected: skills/<name>/SKILL.md)"
                         fi
                     done
-                    echo -e "    ✅ Skills directory: $valid_skills valid modular skills"
+                    if [ "$total_refs" -gt 0 ]; then
+                        echo -e "    ✅ Skills directory: $valid_skills valid modular skills ($total_refs topic references)"
+                    else
+                        echo -e "    ✅ Skills directory: $valid_skills valid modular skills"
+                    fi
+                fi
+
+                # Check agents directory
+                if [ -d "$p/agents" ]; then
+                    local valid_agents=0
+                    local invalid_agents=0
+                    for a in "$p/agents"/*.md; do
+                        [ -e "$a" ] || continue
+                        local has_name has_desc has_tools has_model has_ro
+                        has_name=$(grep -E "^name:" "$a" || true)
+                        has_desc=$(grep -E "^description:" "$a" || true)
+                        has_tools=$(grep -E "^tools:" "$a" || true)
+                        has_model=$(grep -E "^model:" "$a" || true)
+                        has_ro=$(grep -E "^readonly:" "$a" || true)
+                        if [ -n "$has_name" ] && [ -n "$has_desc" ] && [ -n "$has_tools" ] && [ -n "$has_model" ] && [ -n "$has_ro" ]; then
+                            valid_agents=$((valid_agents + 1))
+                        else
+                            invalid_agents=$((invalid_agents + 1))
+                            echo -e "    ⚠️ Invalid agent frontmatter: $a"
+                        fi
+                    done
+                    echo -e "    ✅ Agents directory: $valid_agents valid specialist agents"
                 fi
 
                 # Check commands directory
@@ -137,8 +177,8 @@ cmd_check() {
     fi
 
     # SemVer Parity Check across all 9 manifests
-    local semver_target="0.1.0"
-    local semver_status="v0.1.0 (9/9 aligned)"
+    local semver_target="0.2.0"
+    local semver_status="v0.2.0 (9/9 aligned)"
     if command -v python3 >/dev/null 2>&1; then
         local semver_output
         semver_output="$(python3 - << 'PYEOF' "$REPO_ROOT" "$semver_target"
