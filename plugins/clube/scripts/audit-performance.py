@@ -61,37 +61,64 @@ def audit_chunk_recovery(target_dir):
         })
     return findings
 
+# Edge/CDN configuration files, by provider. The pillar is provider-agnostic: what
+# matters is that *some* edge layer declares the two opposite policies, not that the
+# project is deployed on any particular platform.
+EDGE_CONFIG_FILES = {
+    "vercel.json": "Vercel",
+    "netlify.toml": "Netlify",
+    "_headers": "Netlify / Cloudflare Pages",
+    "nginx.conf": "Nginx",
+    "default.conf": "Nginx",
+    "staticwebapp.config.json": "Azure Static Web Apps",
+    "firebase.json": "Firebase Hosting",
+}
+
+def find_edge_configs(target_dir):
+    """Locate edge/CDN config files anywhere in the tree (monorepo-safe)."""
+    found = []
+    for root, dirs, files in os.walk(target_dir):
+        dirs[:] = [d for d in dirs if d not in IGNORED_DIRS]
+        for f in files:
+            if f in EDGE_CONFIG_FILES:
+                found.append((os.path.join(root, f), EDGE_CONFIG_FILES[f]))
+    return found
+
 def audit_cache_headers(target_dir):
     findings = []
-    vercel_json = os.path.join(target_dir, "vercel.json")
-    nginx_conf = os.path.join(target_dir, "nginx.conf")
 
-    if os.path.exists(vercel_json):
+    for path, provider in find_edge_configs(target_dir):
         try:
-            with open(vercel_json, 'r', encoding='utf-8') as f:
+            with open(path, 'r', encoding='utf-8', errors='ignore') as f:
                 content = f.read()
-                if "immutable" not in content:
-                    findings.append({
-                        "file": "vercel.json",
-                        "type": "CDN Cache Policy",
-                        "severity": "MEDIUM",
-                        "description": "vercel.json does not declare 'immutable' cache headers for hashed static assets."
-                    })
-                if "no-cache" not in content:
-                    findings.append({
-                        "file": "vercel.json",
-                        "type": "CDN Cache Policy",
-                        "severity": "MEDIUM",
-                        "description": "vercel.json does not declare 'no-cache, no-store' for entrypoint files (index.html, sw.js)."
-                    })
         except Exception:
-            pass
+            continue
+
+        rel = os.path.relpath(path, target_dir)
+
+        if "immutable" not in content:
+            findings.append({
+                "file": rel,
+                "type": "CDN Cache Policy",
+                "severity": "MEDIUM",
+                "description": f"{provider} edge config does not declare 'immutable' cache headers for hashed static assets. Content-hashed bundles never change and should be cached for a year."
+            })
+        if "no-cache" not in content and "max-age=0" not in content:
+            findings.append({
+                "file": rel,
+                "type": "CDN Cache Policy",
+                "severity": "MEDIUM",
+                "description": f"{provider} edge config does not declare a revalidating policy for entrypoints (index.html, sw.js, manifest). Without it users stay pinned to an old entrypoint pointing at chunks that no longer exist."
+            })
 
     return findings
+
+POOL_MARKERS = ("SetMaxOpenConns", "MaxConns", "pool_size", "max_overflow", "maximumPoolSize", "poolSize")
 
 def audit_backend_concurrency(target_dir):
     findings = []
     has_go = False
+    has_python_db = False
     has_automaxprocs = False
     has_db_pool_limit = False
 
@@ -100,14 +127,22 @@ def audit_backend_concurrency(target_dir):
         for f in files:
             if f == "go.mod":
                 has_go = True
-            if f.endswith(".go"):
+            if f in ("pyproject.toml", "requirements.txt"):
+                try:
+                    with open(os.path.join(root, f), 'r', encoding='utf-8', errors='ignore') as dep:
+                        dep_txt = dep.read()
+                        if "sqlalchemy" in dep_txt.lower() or "psycopg" in dep_txt.lower():
+                            has_python_db = True
+                except Exception:
+                    pass
+            if f.endswith((".go", ".py")):
                 full_path = os.path.join(root, f)
                 try:
                     with open(full_path, 'r', encoding='utf-8', errors='ignore') as src:
                         content = src.read()
                         if "automaxprocs" in content:
                             has_automaxprocs = True
-                        if "SetMaxOpenConns" in content:
+                        if any(marker in content for marker in POOL_MARKERS):
                             has_db_pool_limit = True
                 except Exception:
                     pass
@@ -117,6 +152,15 @@ def audit_backend_concurrency(target_dir):
             "type": "Container Runtime (Go)",
             "severity": "MEDIUM",
             "description": "Go project detected, but 'go.uber.org/automaxprocs' not found. Risk of CFS quota throttling in multi-core container hosts."
+        })
+
+    # Previously computed and discarded: the docstring advertised this check but no
+    # finding was ever emitted for an unbounded pool.
+    if (has_go or has_python_db) and not has_db_pool_limit:
+        findings.append({
+            "type": "Database Connection Pool",
+            "severity": "MEDIUM",
+            "description": "Backend with a database driver detected, but no explicit connection pool bound found (SetMaxOpenConns / pool_size / maximumPoolSize). Default pools are effectively unbounded: total connections scale as replicas x pool and exhaust the database without any traffic spike."
         })
 
     return findings

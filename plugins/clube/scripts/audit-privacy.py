@@ -23,17 +23,26 @@ import ui  # noqa: E402
 
 BLIND_LOGGING_PATTERNS = [
     (r'console\.log\s*\(\s*(?:req\.body|payload|body|user|customer|account)\b', "JS/TS: Blind console.log of sensitive object"),
-    (r'log\.Printf\s*\(\s*"[^"]*%[+v]v"', "Go: Blind struct serialization (%+v) in log"),
+    # %v is as blind as %+v and far more common; %#v too. The previous class [+v]
+    # matched "%+v" and "%vv" but never plain "%v".
+    (r'(?:log|fmt)\.(?:Printf|Sprintf|Errorf)\s*\(\s*[`"][^`"]*%[+#]?v', "Go: Blind struct serialization (%v/%+v/%#v) in log"),
     (r'zap\.Any\s*\(\s*"(?:user|req|payload|body|account|customer)"', "Go: zap.Any blind struct serialization"),
     (r'logger\.(?:info|warn|error|debug)\s*\(\s*f?"[^"]*\{user\b', "Python: Direct user object interpolation in logger"),
+    (r'(?:logger|log)\.(?:info|warning|warn|error|debug)\s*\(\s*[^)]*\.model_dump\s*\(', "Python: Pydantic model_dump() piped straight into a log"),
 ]
 
 QUERY_PII_PATTERNS = [
-    (r'[?&](?:cpf|cnpj|email|telefone|phone|senha|password|token)=\b', "PII in query string / URL pattern"),
+    # The trailing \b required a word character right after "=", which skipped the most
+    # common shape of the bug: interpolation ("?token=" + t, `?email=${e}`).
+    (r'[?&](?:cpf|cnpj|email|telefone|phone|senha|password|token|access_token|api_?key)=', "PII or secret in query string / URL pattern"),
 ]
 
 METRIC_PII_PATTERNS = [
-    (r'labels\s*[:=]\s*\[[^\]]*(?:"email"|"user_id"|"cpf"|"phone")[^\]]*\]', "Prometheus: High-cardinality / PII label in metric"),
+    (r'labels\s*[:=]\s*[\[\{][^\]\}]*(?:"email"|"user_id"|"cpf"|"phone"|\'email\'|\'user_id\')', "Prometheus: High-cardinality / PII label in metric"),
+    # Go idiom: label slice declared inline in the metric constructor, no "labels" keyword.
+    (r'\[\]string\s*\{[^}]*"(?:email|user_id|userID|cpf|phone|document)"', "Prometheus (Go): PII label declared in metric label slice"),
+    # Raw request path as a metric label — unbounded cardinality, externally triggerable.
+    (r'WithLabelValues\s*\([^)]*(?:Request\.URL\.Path|r\.URL\.Path|request\.url\.path)', "Prometheus: raw URL path as metric label — use the route template, not the concrete path"),
 ]
 
 IGNORED_DIRS = {'.git', 'node_modules', 'dist', 'build', '.specs', 'vendor', '__pycache__', '.venv', 'venv', '.clube'}
@@ -93,8 +102,11 @@ def audit(target_dir):
         for file in files:
             full_path = os.path.join(root, file)
             issues = scan_file(full_path)
-            if issues:
-                all_issues.extend(issues)
+            for issue in issues:
+                # Report paths relative to the target, like the other auditors do —
+                # absolute paths leak the developer's home directory into the runlog.
+                issue["file"] = os.path.relpath(full_path, target_dir)
+            all_issues.extend(issues)
             scanned_count += 1
 
     issues_count = len(all_issues)

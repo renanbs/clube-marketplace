@@ -22,31 +22,55 @@ import ui  # noqa: E402
 
 IGNORED_DIRS = {'.git', 'node_modules', 'dist', 'build', '.specs', 'vendor', '__pycache__', '.venv', 'venv', '.clube'}
 
+# Deriving the cookie root domain from the hostname generically ("take the last two
+# labels") silently breaks on Public Suffix List hosts: setting domain=.vercel.app or
+# .pages.dev makes the browser drop the cookie with no error, so attribution vanishes on
+# every preview deploy. The correct shape is an explicit allowlist of the product's own
+# domains, omitting the attribute everywhere else.
+GENERIC_DOMAIN_DERIVATION_RE = re.compile(
+    r'(?:hostname|host)\s*\.\s*split\s*\(\s*[\'"]\.[\'"]\s*\)[\s\S]{0,200}?slice\s*\(\s*-\s*[23]\s*\)',
+    re.IGNORECASE,
+)
+COOKIE_DOMAIN_RE = re.compile(r'domain\s*[=:]\s*[`\'"]?[;\s]*\.?\$?\{?', re.IGNORECASE)
+
 def audit_cookie_domain(target_dir):
     findings = []
     has_tracking = False
-    has_root_domain_cookie = False
+    has_cookie_domain = False
 
     for root, dirs, files in os.walk(target_dir):
         dirs[:] = [d for d in dirs if d not in IGNORED_DIRS]
         for f in files:
-            if f.endswith(('.ts', '.js', '.vue', '.jsx', '.tsx')):
-                full_path = os.path.join(root, f)
-                try:
-                    with open(full_path, 'r', encoding='utf-8', errors='ignore') as src:
-                        content = src.read()
-                        if "utm_source" in content or "fbclid" in content or "gclid" in content:
-                            has_tracking = True
-                            if "domain=" in content or "domain:" in content or ".clube" in content or "rootDomain" in content:
-                                has_root_domain_cookie = True
-                except Exception:
-                    pass
+            if not f.endswith(('.ts', '.js', '.vue', '.jsx', '.tsx')):
+                continue
+            full_path = os.path.join(root, f)
+            try:
+                with open(full_path, 'r', encoding='utf-8', errors='ignore') as src:
+                    content = src.read()
+            except Exception:
+                continue
 
-    if has_tracking and not has_root_domain_cookie:
+            if not ("utm_source" in content or "fbclid" in content or "gclid" in content
+                    or "_fbp" in content or "_fbc" in content):
+                continue
+            has_tracking = True
+
+            if "document.cookie" in content and COOKIE_DOMAIN_RE.search(content):
+                has_cookie_domain = True
+
+            if GENERIC_DOMAIN_DERIVATION_RE.search(content):
+                findings.append({
+                    "file": os.path.relpath(full_path, target_dir),
+                    "type": "Attribution Cookie Scope",
+                    "severity": "HIGH",
+                    "description": "Cookie root domain appears to be derived generically from the hostname (splitting labels). On Public Suffix List hosts (*.vercel.app, *.netlify.app, *.pages.dev, *.github.io) the browser silently rejects a cookie scoped to the suffix, so attribution is lost on every preview deploy. Match against an explicit allowlist of the product's own domains and omit the domain attribute elsewhere."
+                })
+
+    if has_tracking and not has_cookie_domain:
         findings.append({
             "type": "Attribution Cookie Scope",
             "severity": "MEDIUM",
-            "description": "UTM/ad tracking parameters detected, but no root domain cookie configuration found. Cookies set without root domain will not persist across subdomains (e.g., from landing page to app.domain.com)."
+            "description": "UTM/ad tracking parameters detected, but no cookie domain scoping found. Cookies set without an explicit root domain will not persist across subdomains (e.g., from landing page to app.domain.com)."
         })
 
     return findings

@@ -23,6 +23,24 @@ import ui  # noqa: E402
 
 IGNORED_DIRS = {'.git', 'node_modules', 'dist', 'build', '.specs', 'vendor', '__pycache__', '.venv', 'venv', '.clube'}
 
+PUBLIC_DIRS = ("", "public", "static", "www", "dist")
+
+def find_public_file(target_dir, filename):
+    """Locate a public-root file (llms.txt, robots.txt, ...).
+
+    Walks the tree instead of probing only target_dir, so the check still works when
+    the target is a monorepo whose sites live in sibling subdirectories
+    (code/site-lp/public/llms.txt) rather than at the repository root.
+    """
+    for root, dirs, files in os.walk(target_dir):
+        dirs[:] = [d for d in dirs if d not in IGNORED_DIRS]
+        if filename not in files:
+            continue
+        # Only accept it when it sits somewhere that is actually served at the URL root.
+        if os.path.basename(root) in PUBLIC_DIRS or os.path.abspath(root) == os.path.abspath(target_dir):
+            return os.path.join(root, filename)
+    return None
+
 def has_web_landing_pages(target_dir):
     for root, dirs, files in os.walk(target_dir):
         dirs[:] = [d for d in dirs if d not in IGNORED_DIRS]
@@ -44,27 +62,29 @@ def audit_llms_txt(target_dir):
     if not has_web_landing_pages(target_dir):
         return findings
 
-    candidates = [
-        os.path.join(target_dir, "llms.txt"),
-        os.path.join(target_dir, "public", "llms.txt"),
-        os.path.join(target_dir, "static", "llms.txt"),
-    ]
-    if not any(os.path.exists(p) for p in candidates):
+    llms = find_public_file(target_dir, "llms.txt")
+    if not llms:
         findings.append({
             "type": "GEO (AI Engine Optimization)",
             "severity": "MEDIUM",
             "description": "Public web app / landing page detected, but missing '/llms.txt'. AI search engines (ChatGPT Search, Perplexity, Claude) lack structured factual context for your SaaS."
         })
+        return findings
+
+    # llms-full.txt only makes sense once llms.txt exists — it is the deep-context
+    # companion referenced from the index.
+    if not find_public_file(target_dir, "llms-full.txt"):
+        findings.append({
+            "file": os.path.relpath(llms, target_dir),
+            "type": "GEO (AI Engine Optimization)",
+            "severity": "LOW",
+            "description": "'llms.txt' found but no 'llms-full.txt'. Models with large context windows have no aggregated source for feature detail, full FAQ and comparison tables — generate it at build time from the same content sources."
+        })
     return findings
 
 def audit_robots_and_noindex(target_dir):
     findings = []
-    robots_candidates = [
-        os.path.join(target_dir, "robots.txt"),
-        os.path.join(target_dir, "public", "robots.txt"),
-        os.path.join(target_dir, "static", "robots.txt"),
-    ]
-    robots_file = next((p for p in robots_candidates if os.path.exists(p)), None)
+    robots_file = find_public_file(target_dir, "robots.txt")
 
     if robots_file:
         try:
@@ -82,37 +102,57 @@ def audit_robots_and_noindex(target_dir):
 
     return findings
 
+NOINDEX_RE = re.compile(r'name=["\']robots["\'][^>]*content=["\'][^"\']*noindex', re.IGNORECASE)
+CANONICAL_RE = re.compile(r'rel=["\']canonical["\']', re.IGNORECASE)
+
 def audit_html_metadata(target_dir):
     findings = []
-    has_html = False
+    has_indexable_html = False
     has_canonical = False
     has_json_ld = False
 
     for root, dirs, files in os.walk(target_dir):
         dirs[:] = [d for d in dirs if d not in IGNORED_DIRS]
         for f in files:
-            if f.endswith(('.html', '.astro', '.vue', '.tsx', '.jsx')):
-                full_path = os.path.join(root, f)
-                try:
-                    with open(full_path, 'r', encoding='utf-8', errors='ignore') as src:
-                        content = src.read()
-                        if "<html" in content or "rel=\"canonical\"" in content:
-                            has_html = True
-                        if 'rel="canonical"' in content or "rel='canonical'" in content:
-                            has_canonical = True
-                        if 'application/ld+json' in content:
-                            has_json_ld = True
-                except Exception:
-                    pass
+            if not f.endswith(('.html', '.astro', '.vue', '.tsx', '.jsx')):
+                continue
+            full_path = os.path.join(root, f)
+            try:
+                with open(full_path, 'r', encoding='utf-8', errors='ignore') as src:
+                    content = src.read()
+            except Exception:
+                continue
 
-    if has_html and not has_canonical:
+            is_noindex = bool(NOINDEX_RE.search(content))
+            file_has_canonical = bool(CANONICAL_RE.search(content))
+
+            if ("<html" in content or file_has_canonical) and not is_noindex:
+                has_indexable_html = True
+            if file_has_canonical and not is_noindex:
+                has_canonical = True
+            if 'application/ld+json' in content:
+                has_json_ld = True
+
+            # A noindex page telling crawlers "this is the canonical address to index"
+            # is self-contradictory; the canonical is ignored and the pair is a smell
+            # that a private entrypoint was copied from a public template.
+            if is_noindex and file_has_canonical:
+                findings.append({
+                    "file": os.path.relpath(full_path, target_dir),
+                    "type": "Technical SEO",
+                    "severity": "MEDIUM",
+                    "description": "Page declares 'noindex' and a 'rel=canonical' at the same time. The two signals contradict each other and the canonical is ignored — remove the canonical from private entrypoints instead of pointing it somewhere."
+                })
+
+    # Only indexable templates are expected to carry a canonical.
+    if has_indexable_html and not has_canonical:
         findings.append({
             "type": "Technical SEO",
             "severity": "MEDIUM",
-            "description": "Public templates detected, but no 'rel=canonical' tag found. Risk of duplicate content penalties."
+            "description": "Indexable public templates detected, but no 'rel=canonical' tag found. Risk of duplicate content penalties."
         })
 
-    if has_html and not has_json_ld:
+    if has_indexable_html and not has_json_ld:
         findings.append({
             "type": "Structured Data",
             "severity": "LOW",
