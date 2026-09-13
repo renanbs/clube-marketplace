@@ -13,9 +13,15 @@ import sys
 import re
 import json
 import argparse
+from datetime import datetime, timezone
 from pathlib import Path
 
-IGNORED_DIRS = {'.git', 'node_modules', 'dist', 'build', '.specs', 'vendor', '__pycache__', '.venv', 'venv'}
+# Sibling module import
+script_dir = Path(__file__).parent.resolve()
+sys.path.insert(0, str(script_dir))
+import ui  # noqa: E402
+
+IGNORED_DIRS = {'.git', 'node_modules', 'dist', 'build', '.specs', 'vendor', '__pycache__', '.venv', 'venv', '.clube'}
 
 def audit_chunk_recovery(target_dir):
     findings = []
@@ -121,10 +127,18 @@ def audit(target_dir):
     all_findings.extend(audit_cache_headers(target_dir))
     all_findings.extend(audit_backend_concurrency(target_dir))
 
+    issues_count = len(all_findings)
+    score = ui.calculate_health_score(issues_count, penalty_per_issue=25)
+    verdict = "PASS" if issues_count == 0 else "ACTION REQUIRED"
+
     return {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "audit": "performance",
         "pillar": "Fullstack Performance & Resilience",
-        "target": target_dir,
-        "issues_count": len(all_findings),
+        "target": os.path.abspath(target_dir),
+        "issues_count": issues_count,
+        "score": score,
+        "verdict": verdict,
         "issues": all_findings
     }
 
@@ -135,33 +149,42 @@ def main():
     args = parser.parse_args()
 
     result = audit(args.target)
+    ui.save_runlog(result)
 
     if args.json:
         print(json.dumps(result, indent=2))
         sys.exit(0 if result["issues_count"] == 0 else 1)
 
-    print("### 1. Plan")
+    ui.print_header("CLUBE PERFORMANCE & RESILIENCE AUDIT", "Deterministic SPA Chunk Recovery, CDN Cache & Concurrency Scanner")
+
+    print(f"{ui.BOLD}### 1. Plan{ui.RESET}\n")
     print(f"- **Audit:** Fullstack Performance & Deploy Resilience (`clube:fullstack-performance-resilience`)")
-    print(f"- **Target:** {os.path.abspath(args.target)}")
+    print(f"- **Target:** {result['target']}")
     print(f"- **Mode:** Deterministic static analysis\n")
 
-    print("### 2. Execution")
+    print(f"{ui.BOLD}### 2. Execution{ui.RESET}\n")
     if result["issues_count"] == 0:
-        print("  ✅ All checked performance & deploy resilience patterns passed.")
+        print(f"  {ui.format_badge('PASS')} All checked performance & deploy resilience patterns passed.\n")
     else:
-        print(f"  ⚠️ Found {result['issues_count']} performance & resilience finding(s):")
+        print(f"  {ui.format_badge('WARN')} Found {result['issues_count']} performance & resilience finding(s):\n")
         for item in result["issues"]:
-            badge = "❌" if item["severity"] == "HIGH" else "⚠️"
+            badge = ui.format_badge("FAIL") if item["severity"] == "HIGH" else ui.format_badge("WARN")
             file_ref = f" [{item.get('file', '')}]" if item.get('file') else ""
             print(f"  {badge} [{item['type']}]{file_ref}: {item['description']}")
+        print()
 
-    print("\n### 3. Summary")
-    print("| Metric | Value |")
-    print("| :--- | :--- |")
-    print(f"| Performance Findings | {result['issues_count']} |")
-    print(f"| Status | {'PASS' if result['issues_count'] == 0 else 'ACTION REQUIRED'} |")
+    print(f"{ui.BOLD}### 3. Summary{ui.RESET}\n")
+    print(f"Health Score: {ui.render_health_bar(result['score'])}\n")
 
-    print("\n### 4. Recommended Actions")
+    summary_headers = ["Metric", "Value", "Status"]
+    summary_rows = [
+        ["Performance Findings", str(result["issues_count"]), ui.format_badge("PASS" if result["issues_count"] == 0 else "ACTION REQUIRED", "PASS" if result["issues_count"] == 0 else f"{result['issues_count']} FINDINGS")],
+        ["Health Score", f"{result['score']}%", ui.format_badge("PASS" if result["score"] >= 80 else ("WARN" if result["score"] >= 50 else "FAIL"))],
+        ["Runlog Saved", ".clube/audit-last.json", ui.format_badge("PASS")],
+    ]
+    print(ui.render_table(summary_headers, summary_rows))
+
+    print(f"\n{ui.BOLD}### 4. Recommended Actions{ui.RESET}\n")
     if result["issues_count"] == 0:
         print("- Deploy resilience and concurrency boundaries are configured.")
     else:

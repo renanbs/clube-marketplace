@@ -1,16 +1,16 @@
 ---
 name: marketing-attribution-analytics
 description: |
-  Especialista em instrumentação de métricas, tracking e atribuição ponta a ponta para SaaS.
-  Skill de domínio: é intencionalmente concreta sobre Meta/Google, mas os blocos de infraestrutura
-  (cookies, storage, deduplicação, roteamento) são agnósticos de framework.
-  Ative esta skill sempre que:
-  - Implementar ou modificar tags de conversão (Meta Pixel, Google Ads, GA4, PostHog, Mixpanel).
-  - Desenvolver fluxos de captura de leads, registro/signup, onboarding ou checkout e pagamentos.
-  - Configurar atribuição de campanhas (UTMs, fbclid, gclid, gbraid, wbraid, _fbc, _fbp).
-  - Lidar com persistência de dados de marketing no backend (coluna acquisition_context JSONB).
-  - Implementar tracking server-side (Meta Conversions API - CAPI) ou rastreamento cross-domain com deduplicação via event_id.
-  - Configurar regras de disparo de analytics no roteador (Vue Router, React Router, SvelteKit, etc.).
+  Specialist in metric instrumentation, tracking, and end-to-end attribution for SaaS products.
+  Domain skill: concrete for Meta and Google platforms, while infrastructure components
+  (cookies, storage, deduplication, routing) are framework-agnostic.
+  Activate this skill whenever:
+  - Implementing or updating conversion tags (Meta Pixel, Google Ads, GA4, PostHog, Mixpanel).
+  - Developing lead capture flows, signup/registration, onboarding, or checkout and payments.
+  - Configuring campaign attribution (UTMs, fbclid, gclid, gbraid, wbraid, _fbc, _fbp).
+  - Handling backend marketing persistence (acquisition_context JSONB column).
+  - Implementing server-side tracking (Meta Conversions API - CAPI) or cross-domain tracking with event_id deduplication.
+  - Configuring analytics trigger rules in client-side routers (Vue Router, React Router, SvelteKit, etc.).
 license: Apache-2.0
 metadata:
   version: v2.0
@@ -19,40 +19,39 @@ metadata:
 
 # Marketing Attribution & Analytics Playbook
 
-Padrão de rastreamento analítico e atribuição de tráfego pago, do clique no anúncio até a persistência no banco relacional.
+Standardized patterns for analytics tracking and paid traffic attribution, from initial ad click through relational database persistence.
 
-> **Escopo desta skill:** diferente das skills de arquitetura, esta é uma skill de **domínio**. Meta Pixel, GA4 e Google Ads aparecem por nome porque a skill é justamente sobre integrar com eles — generalizar isso destruiria o valor prático. O que é genérico e reaproveitável em qualquer stack são as seções 1 (cookies e storage), 4 (higiene e deduplicação) e 3B (modelo de dados).
+> **Scope of this skill:** Unlike general architecture skills, this is a **domain** skill. Platforms such as Meta Pixel, GA4, and Google Ads are referenced by name because this skill provides direct integration guidance. The universal, reusable infrastructure patterns reside in Sections 1 (cookies and storage), 4 (hygiene and deduplication), and 3B (data modeling).
 
 ---
 
-## 1. Atribuição First-Touch & Cookies de Domínio Raiz
+## 1. First-Touch Attribution & Root Domain Cookies
 
-### A. Parâmetros a capturar
-Modelo de **primeiro toque**: os dados da campanha que trouxe o usuário não podem se perder em navegações subsequentes nem no salto da LP para o app.
+### A. Parameters to Capture
+Under a **first-touch** attribution model, campaign parameters that brought the user to the marketing site must never be lost during subsequent page navigation or the transition from landing page to application subdomain.
 
-`utm_source`, `utm_medium`, `utm_campaign`, `utm_content`, `utm_term`, `fbclid`, `gclid`, `gbraid`, `wbraid`.
+Capture: `utm_source`, `utm_medium`, `utm_campaign`, `utm_content`, `utm_term`, `fbclid`, `gclid`, `gbraid`, `wbraid`.
 
-### B. Cookie compartilhado entre LP e subdomínio do app
+### B. Shared Cookie Between Landing Page and App Subdomain
 
-Para que `dominio.com.br` e `app.dominio.com.br` leiam o mesmo cookie, ele precisa do atributo `domain` apontando para o domínio raiz.
+For `domain.com` and `app.domain.com` to share attribution state, cookies must declare a `domain` attribute pointing to the shared root domain.
 
-> ⚠️ **Nunca derive o domínio raiz genericamente a partir do hostname.** A tentação é "pegar os dois últimos rótulos do host", mas isso quebra em dois cenários comuns:
-> - **Sufixos compostos:** `.com.br`, `.co.uk`, `.org.br` precisam de três rótulos, não dois.
-> - **Public Suffix List:** hosts de preview como `meu-app-abc123.vercel.app`, `*.netlify.app`, `*.pages.dev` e `*.github.io` têm o sufixo registrado na PSL. Setar `domain=.vercel.app` faz o **browser rejeitar o cookie silenciosamente** — sem erro, sem exceção, só atribuição sumindo em todo ambiente de preview.
+> ⚠️ **Never derive the root domain naively from hostname.** Taking "the last two host labels" fails in two critical scenarios:
+> - **Compound Top-Level Domains:** `.com.br`, `.co.uk`, `.org.br` require three domain labels, not two.
+> - **Public Suffix List (PSL):** Preview hosts such as `my-app-abc123.vercel.app`, `*.netlify.app`, `*.pages.dev`, and `*.github.io` are registered on the PSL. Setting `domain=.vercel.app` causes **the browser to silently reject the cookie** — without errors or exceptions, silently breaking attribution across all preview environments.
 >
-> A regra correta é a inversa: **declare `domain` apenas quando reconhecer explicitamente o domínio do produto; em qualquer outro host, omita o atributo** e deixe o cookie ser host-only. Preview e localhost não precisam de compartilhamento cross-subdomain mesmo.
+> The correct approach: **Only set `domain` when explicitly matching known production root domains; for any other host, omit the attribute** and allow the cookie to remain host-only. Preview environments and localhost do not require cross-subdomain sharing.
 
 ```javascript
 const COOKIE_DAYS = 90;
 
-// Único ponto de configuração por projeto. Liste os domínios raiz reais do produto.
-const PRODUCT_ROOT_DOMAINS = ['dominio.com.br'];
+// Single configuration point per project. List verified production root domains.
+const PRODUCT_ROOT_DOMAINS = ['domain.com'];
 
 /**
- * Retorna o sufixo `; domain=...` quando o host atual pertence a um domínio
- * conhecido do produto. Caso contrário retorna string vazia (cookie host-only),
- * o que é o comportamento correto em localhost, IP bruto e domínios de preview
- * cobertos pela Public Suffix List.
+ * Returns the `; domain=...` suffix when the current host matches a recognized
+ * production product domain. Otherwise returns an empty string (host-only cookie),
+ * which is the correct behavior for localhost, raw IPs, and PSL preview hosts.
  */
 export function cookieDomainSuffix() {
   if (typeof window === 'undefined') return '';
@@ -81,21 +80,21 @@ export function getCookie(name) {
 }
 ```
 
-### C. Geração de `_fbc` e `_fbp`
-* Se houver `fbclid` na query e não existir `_fbc`, gere: `fb.1.${Date.now()}.${fbclid}`.
-* Se não existir `_fbp`, gere um ID persistente: `fb.1.${Date.now()}.${Math.floor(Math.random() * 2147483647)}`.
-* Se a LP repassar os valores já formados na query (ex: `?pt_fbc=...&pt_fbp=...`), **prefira o valor repassado** ao regerar — regerar cria um identificador novo e quebra a continuidade da atribuição.
+### C. Generation of `_fbc` and `_fbp`
+* If `fbclid` is present in query parameters and no `_fbc` cookie exists, generate: `fb.1.${Date.now()}.${fbclid}`.
+* If no `_fbp` cookie exists, generate a persistent identifier: `fb.1.${Date.now()}.${Math.floor(Math.random() * 2147483647)}`.
+* If the landing page passes formed tracking parameters in query strings (e.g., `?pt_fbc=...&pt_fbp=...`), **always prefer the passed value** over regenerating a new ID — regenerating resets user continuity.
 
-### D. Fallback em `sessionStorage`
-Armazene sempre uma cópia do contexto capturado em `sessionStorage`, para sobreviver a cookies rejeitados, bloqueados por extensão ou limpos durante a sessão.
+### D. Fallback in `sessionStorage`
+Always store a parallel copy of the captured attribution context in `sessionStorage` to maintain tracking continuity when cookies are blocked or cleared.
 
 ---
 
-## 2. Continuidade de Sessão: Linker GA4 Cross-Domain com Fail-Safe
+## 2. Session Continuity: GA4 Cross-Domain Linker with Fail-Safe
 
-Navegar da LP para o subdomínio `app.` quebra a sessão no GA4 a menos que a URL de destino carregue o parâmetro do linker. A decoração precisa acontecer no momento do clique, porque o parâmetro é sensível ao tempo.
+Navigating from the landing page to an `app.` subdomain breaks Google Analytics 4 sessions unless the destination URL includes the GA linker parameter. URL decoration must occur at the moment of click because linker parameters are time-sensitive.
 
-> ⚠️ **Regra crítica de UX:** nunca espere o `window.gtag` indefinidamente. Com adblockers (uBlock, Brave Shields) ou conexão instável, o callback do `gtag` pode **nunca** responder — e o usuário fica com o botão travado. Timeout fail-safe é obrigatório: perder a continuidade de sessão é aceitável, perder o clique não é.
+> ⚠️ **Critical UX Rule:** Never await `window.gtag` indefinitely. When users run adblockers (uBlock Origin, Brave Shields) or experience network hiccups, the `gtag` callback may **never fire** — locking the button and freezing the UI. A fail-safe timeout is mandatory: losing analytics session continuity is acceptable; blocking user signups is not.
 
 ```javascript
 export function decorateWithGaLinker(targetUrl, timeoutMs = 600) {
@@ -128,23 +127,23 @@ export function decorateWithGaLinker(targetUrl, timeoutMs = 600) {
 }
 ```
 
-No clique do CTA de cadastro/login:
-1. Dispare os eventos locais de clique (`trackRegisterClick`).
-2. Aguarde a decoração com timeout seguro: `const finalUrl = await decorateWithGaLinker(url);`
-3. Redirecione com `window.location.assign(finalUrl)`.
+On primary CTA click (Signup/Login):
+1. Fire local click tracking events (`trackRegisterClick`).
+2. Await linker decoration with timeout fail-safe: `const finalUrl = await decorateWithGaLinker(url);`
+3. Redirect with `window.location.assign(finalUrl)`.
 
-Declare também os domínios no config do gtag, para o linker automático cobrir links normais:
+Also declare linked domains in your initial gtag configuration:
 ```javascript
-gtag('config', GA_ID, { linker: { domains: ['dominio.com.br', 'app.dominio.com.br'] } });
+gtag('config', GA_ID, { linker: { domains: ['domain.com', 'app.domain.com'] } });
 ```
 
 ---
 
-## 3. Persistência no Backend (`acquisition_context JSONB`)
+## 3. Backend Persistence (`acquisition_context JSONB`)
 
-Dado de marketing vira dado relacional permanente. É o que torna a análise de CAC e LTV imune a restrições de navegador, expiração de cookie e mudança de política das plataformas.
+Persisting marketing context as immutable relational data decouples CAC and LTV analytics from browser storage expiration, third-party cookie restrictions, and ad platform reporting delays.
 
-### A. Frontend (payload de signup)
+### A. Frontend Signup Payload
 ```javascript
 export function buildAcquisitionContextForSignup() {
   const ctx = readStoredCampaign();
@@ -165,23 +164,23 @@ export function buildAcquisitionContextForSignup() {
 }
 ```
 
-### B. Banco de dados (exemplo em PostgreSQL)
+### B. Relational Schema (PostgreSQL Example)
 ```sql
 ALTER TABLE users ADD COLUMN IF NOT EXISTS acquisition_context JSONB;
 COMMENT ON COLUMN users.acquisition_context IS
-  'First-touch marketing attribution captured at signup (UTMs, fbclid, etc.). Immutable after create.';
+  'First-touch marketing attribution captured at signup (UTMs, fbclid, etc.). Immutable after creation.';
 ```
 
-Em bancos sem tipo JSON nativo, use uma coluna texto com o JSON serializado ou uma tabela lateral chave/valor — o princípio é que o contexto de aquisição seja **imutável após a criação** e consultável junto com faturamento, não que seja JSONB especificamente.
+In databases without native JSON support, store serialized JSON in a text column or maintain a key-value relation — the core principle is that the acquisition context remains **immutable after account creation** and directly queryable alongside billing events.
 
-* **Benefício:** CAC, LTV e cohort reais com SQL direto entre faturamento e campanha, sem depender de relatório externo de plataforma.
+* **Benefit:** Compute exact CAC, LTV, and cohort payback via pure SQL joining revenue to campaign source without external SaaS dependencies.
 
 ---
 
-## 4. Higiene e Roteamento no Frontend
+## 4. Frontend Hygiene and Routing
 
-### A. Bloqueio em rotas administrativas
-Eventos disparados por operadores e equipe interna contaminam o algoritmo de lances das plataformas de anúncio — o modelo passa a otimizar para um perfil de usuário que nunca vai comprar.
+### A. Exclude Administrative Routes
+Internal operators and support staff navigating the app pollute ad platform bidding algorithms — training optimization models on non-converting internal profiles.
 
 ```javascript
 export function isAdminPath(path) {
@@ -194,14 +193,14 @@ export function shouldTrackRoute(path) {
 }
 ```
 
-### B. Resiliência de conversão em redirects assíncronos
-Em SPAs, navegar para `/dashboard` logo após o submit cancela requisições de tracking pendentes. Use o padrão **Pending / Flush**: grave a intenção antes de navegar, dispare depois que a rota assentou.
+### B. Conversion Resilience Across Asynchronous Redirects
+In SPAs, immediate navigation to `/dashboard` upon form submission can abort pending network tracking requests. Use the **Pending / Flush** pattern: persist intent in storage prior to navigating, and flush tracking once the new route settles.
 
 ```javascript
-// 1. No submit bem-sucedido
+// 1. On successful submission
 sessionStorage.setItem('pt_pending_registration', JSON.stringify({ accountType, params }));
 
-// 2. No hook pós-navegação do roteador
+// 2. In router post-navigation hook
 router.afterEach((to) => {
   flushPendingRegistrationTracking();
   if (shouldTrackRoute(to.fullPath)) {
@@ -209,10 +208,10 @@ router.afterEach((to) => {
   }
 });
 ```
-*O hook equivalente em outros roteadores: `useEffect` sobre `location` no React Router, `afterNavigate` no SvelteKit, `router.events.on('routeChangeComplete')` no Next.js Pages Router.*
+*Equivalent hooks in other routers: `useEffect` listening to `location` in React Router, `afterNavigate` in SvelteKit, `router.events.on('routeChangeComplete')` in Next.js Pages Router.*
 
-### C. Deduplicação por chave de transação
-Deduplique por **transação**, nunca por flag booleana global — flag global impede registrar a segunda compra do mesmo cliente, upgrades de plano e renovações.
+### C. Deduplication by Transaction Key
+Always deduplicate conversion events by unique **transaction ID**, never with a global boolean flag — global flags prevent tracking recurring purchases, plan upgrades, and renewals.
 
 ```javascript
 export function trackPurchaseOnce({ value, planId, transactionId }) {
@@ -224,8 +223,8 @@ export function trackPurchaseOnce({ value, planId, transactionId }) {
     window.fbq(
       'track',
       'Purchase',
-      { value, currency: 'BRL', content_name: planId },
-      { eventID: transactionId }, // chave de deduplicação com CAPI
+      { value, currency: 'USD', content_name: planId },
+      { eventID: transactionId }, // Deduplication key shared with Meta CAPI
     );
   }
 
@@ -233,70 +232,68 @@ export function trackPurchaseOnce({ value, planId, transactionId }) {
     window.gtag('event', 'purchase', {
       transaction_id: transactionId,
       value,
-      currency: 'BRL',
+      currency: 'USD',
       items: [{ item_name: planId }],
     });
   }
 }
 ```
 
-### D. Teste a instrumentação — ela é a única parte do sistema que falha em silêncio
+### D. Automated Testing of Tracking Instrumentation
 
-Código de tracking é o candidato natural a ficar sem teste: não tem tela, não tem retorno para o usuário, e "dá para conferir no painel depois". É exatamente por isso que precisa de teste.
+Analytics code is vulnerable to being left untested: it renders no UI, returns no visible feedback, and developers assume "we can verify in the dashboard later."
 
-**Quando qualquer outra parte do sistema quebra, alguma coisa reclama** — erro no console, tela em branco, requisição 500, alerta. Quando o tracking quebra, **nada acontece**. A aplicação continua perfeita, o usuário completa a compra, e o evento simplesmente não sai (ou sai duplicado). Você descobre semanas depois reconciliando faturamento — e, no intervalo, otimizou campanha e decidiu orçamento em cima de número errado. O custo do bug não é o bug: é a decisão tomada com o dado que ele corrompeu.
+**When other system components break, errors surface** — console warnings, 500 status codes, broken layouts. When analytics breaks, **nothing visible happens**. The checkout completes, revenue arrives, but conversion events fail silently (or double-fire). Flawed data leads to misallocated ad budgets weeks before discovery.
 
-Cubra com teste unitário, mockando `window.fbq` e `window.gtag`:
+Cover tracking pipelines with unit tests, mocking `window.fbq` and `window.gtag`:
 
-1. **Deduplicação funciona:** chamar `trackPurchaseOnce` duas vezes com o mesmo `transactionId` dispara **uma** vez.
-2. **Deduplicação não é global:** chamar com `transactionId` diferente dispara **de novo** — é o teste que pega a regressão de "voltaram a usar flag booleana" e mata a receita de recompra e upgrade.
-3. **Higiene de rota:** `shouldTrackRoute('/admin/lojas')` é `false` e `shouldTrackRoute('/dashboard')` é `true`.
-4. **Chave de deduplicação cruzada:** o `eventID` passado ao Pixel é idêntico ao `transaction_id` enviado ao GA4 — se divergirem, a deduplicação com o CAPI para de funcionar sem nenhum sintoma local.
-5. **Degradação segura:** com `window.fbq` e `window.gtag` indefinidos (adblocker), as funções de tracking não lançam exceção nem interrompem o fluxo de checkout.
-6. **Fail-safe do linker:** `decorateWithGaLinker` resolve dentro do timeout mesmo quando o callback do `gtag` nunca é chamado.
-
-Os itens 4 e 5 são os que mais pegam bug real: o primeiro quebra atribuição sem quebrar nada visível, o segundo transforma um adblocker em falha de checkout.
+1. **Deduplication Verification:** Invoking `trackPurchaseOnce` multiple times with the same `transactionId` fires exactly **once**.
+2. **Per-Transaction Isolation:** Invoking with distinct `transactionId` values fires **again** — preventing regressions back to global boolean flags.
+3. **Route Hygiene:** `shouldTrackRoute('/admin/stores')` evaluates to `false` and `shouldTrackRoute('/dashboard')` evaluates to `true`.
+4. **Cross-Platform Key Parity:** The `eventID` passed to Meta Pixel is identical to `transaction_id` passed to GA4 — divergence breaks server-side CAPI deduplication without client-side errors.
+5. **Graceful Degradation:** When `window.fbq` or `window.gtag` are undefined (adblockers), tracking methods resolve cleanly without throwing unhandled exceptions.
+6. **Linker Fail-Safe:** `decorateWithGaLinker` resolves within the timeout deadline even when the GA callback fails to execute.
 
 ---
 
-## 5. Eventos Padronizados de Funil
+## 5. Standardized Funnel Events
 
-| Etapa | Meta Pixel (`fbq`) | GA4 (`gtag`) | Google Ads |
+| Funnel Step | Meta Pixel (`fbq`) | GA4 (`gtag`) | Google Ads |
 | :--- | :--- | :--- | :--- |
-| **Visita LP** | `trackCustom('LpPageView')` | `event('lp_page_view')` | - |
-| **Clique CTA cadastro** | `trackCustom('StartTrialClick')` | `event('register_click')` | - |
-| **Página de registro** | `trackCustom('RegisterPageView')` | `event('register_page_view')` | - |
-| **Cadastro concluído** | `track('CompleteRegistration')` | `event('sign_up')` | `send_to: AW-xxx/signup` |
-| **Onboarding finalizado** | `trackCustom('OnboardingComplete')` | `event('onboarding_complete')` | `send_to: AW-xxx/onboard` |
-| **Início do checkout** | `track('InitiateCheckout')` | `event('begin_checkout')` | `send_to: AW-xxx/checkout` |
-| **Compra / assinatura** | `track('Purchase', payload, { eventID })` | `event('purchase')` | `send_to: AW-xxx/purchase` |
+| **Landing Page Visit** | `trackCustom('LpPageView')` | `event('lp_page_view')` | - |
+| **Signup CTA Click** | `trackCustom('StartTrialClick')` | `event('register_click')` | - |
+| **Registration Page View** | `trackCustom('RegisterPageView')` | `event('register_page_view')` | - |
+| **Registration Completed** | `track('CompleteRegistration')` | `event('sign_up')` | `send_to: AW-xxx/signup` |
+| **Onboarding Completed** | `trackCustom('OnboardingComplete')` | `event('onboarding_complete')` | `send_to: AW-xxx/onboard` |
+| **Checkout Started** | `track('InitiateCheckout')` | `event('begin_checkout')` | `send_to: AW-xxx/checkout` |
+| **Purchase / Subscription** | `track('Purchase', payload, { eventID })` | `event('purchase')` | `send_to: AW-xxx/purchase` |
 
-> ⚠️ Para `Purchase`, **SEMPRE** use o mesmo identificador (`transaction_id` / `eventID`) no client e no server (CAPI).
+> ⚠️ For `Purchase`, **ALWAYS** use the identical identifier (`transaction_id` / `eventID`) across client tags and server-side CAPI.
 
 ---
 
 ## 6. Server-Side Tracking: Meta Conversions API (CAPI)
 
-Adblockers, ITP no Safari e navegadores focados em privacidade bloqueiam entre 25% e 45% dos eventos de conversão no cliente. Para eventos de receita, o disparo server-side é o que garante entrega.
+Client-side adblockers and browser privacy protections (e.g., Safari ITP) drop between 25% and 45% of client conversion events. Server-side tracking guarantees reliable conversion delivery for revenue-critical events.
 
-* **Quando disparar:** no handler do webhook de confirmação de pagamento do gateway (Stripe, PagSeguro, InfinitePay), não no retorno do checkout — o webhook é a única fonte confiável de que o pagamento aconteceu.
-* **Deduplicação automática:** a Meta deduplica eventos do Pixel e do CAPI que compartilhem o mesmo `event_name` + `event_id` dentro de uma janela de 48 horas.
+* **Trigger Point:** Execute inside the payment gateway webhook handler (Stripe, PagSeguro, Lemon Squeezy), not in the client checkout redirect — webhooks are the sole source of truth for payment settlement.
+* **Automatic Deduplication:** Meta automatically deduplicates Pixel and CAPI events sharing the same `event_name` and `event_id` within a 48-hour window.
 
-**Payload para a Graph API:**
+**Graph API Payload Structure:**
 * `event_name`: `"Purchase"`
-* `event_time`: timestamp Unix atual
-* `event_id`: UUID único do pedido — **deve** ser idêntico ao `transactionId` usado no `eventID` do frontend
+* `event_time`: Current Unix epoch timestamp
+* `event_id`: Unique order UUID — **must** match the `transactionId` / `eventID` emitted by the client
 * `action_source`: `"website"`
 * `user_data`:
-  * `em`: hash SHA256 do e-mail (normalizado: minúsculas, sem espaços nas pontas)
-  * `ph`: hash SHA256 do telefone (só dígitos, com DDI — ex: `5511999999999`)
-  * `fbc` / `fbp`: cookies recuperados do banco ou da requisição
+  * `em`: SHA256 hash of normalized email (lowercase, trimmed)
+  * `ph`: SHA256 hash of normalized phone (digits only with country code — e.g., `15551234567`)
+  * `fbc` / `fbp`: Cookie identifiers extracted from database or request headers
   * `client_ip_address`, `client_user_agent`
 * `custom_data`: `currency`, `value`, `order_id`
 
-> 🔒 **Tratamento de dados pessoais (LGPD/GDPR).** `user_data` transporta PII de cliente real. Requisitos não-negociáveis:
-> - **Hash antes de sair do seu domínio.** E-mail e telefone vão para a Meta apenas como SHA256 da forma normalizada. Nunca envie valor em claro.
-> - **Nunca logue o payload montado.** É o vazamento mais comum: um `log.Printf("%+v", payload)` de debug em produção despeja PII (mesmo hasheada, é dado pessoal pseudonimizado) no agregador de logs, onde fica retido por meses e acessível a quem não deveria. Logue no máximo `event_id` e status da resposta.
-> - **Base legal e consentimento.** O envio de dados de cliente a terceiro para fins publicitários precisa estar coberto na política de privacidade e respeitar a escolha do usuário quando houver banner de consentimento — se o usuário recusou cookies de marketing, o disparo server-side não é uma brecha para ignorar isso.
-> - **Token de acesso é segredo.** O token da Graph API fica em variável de ambiente do backend, nunca em repositório, nunca exposto ao client.
-> - **Minimize.** Envie apenas os campos que melhoram o match (`em`, `ph`, `fbc`, `fbp`, IP, user-agent). Não inclua nome, endereço, CPF ou qualquer campo que a plataforma não exija.
+> 🔒 **Privacy & Data Protection (LGPD / GDPR):**
+> - **Hash PII Before Transmission:** Email and phone numbers must only leave your server as normalized SHA256 hashes. Never transmit raw plaintext PII to third-party ad networks.
+> - **Never Log Assembled Payloads:** Avoid debugging with `log.Printf("%+v", payload)` in production. This leaks pseudonymized personal data into log aggregators where it persists for months. Log only `event_id` and response status codes.
+> - **Respect User Consent:** Transmitting user data for advertising purposes requires legal basis and must respect user consent choices made in consent banners. Server-side dispatch must not bypass client opt-outs.
+> - **Keep Access Tokens Secret:** Store Graph API tokens in secure server environment variables; never commit to repositories or expose to client bundles.
+> - **Data Minimization:** Transmit only fields required for conversion matching (`em`, `ph`, `fbc`, `fbp`, IP, user-agent). Do not send extraneous user data.

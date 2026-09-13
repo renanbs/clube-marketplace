@@ -1,14 +1,14 @@
 ---
 name: saas-seo-geo
 description: |
-  Especialista em SEO técnico e GEO (Generative Engine Optimization) para aplicações SaaS e Landing Pages.
-  Agnóstica de stack e de provedor de hospedagem: os exemplos usam uma stack concreta, mas o princípio vale para qualquer uma.
-  Ative esta skill sempre que:
-  - Criar ou refatorar Landing Pages, páginas de marketing, vitrines públicas, blogs ou telas institucionais.
-  - Configurar metadados, Open Graph, Twitter Cards, tags canônicas, robots.txt, sitemaps, llms.txt ou llms-full.txt.
-  - Implementar dados estruturados (Schema.org / JSON-LD) como FAQPage, SoftwareApplication, Organization ou Breadcrumbs.
-  - Desenvolver páginas com Astro, Vite, Next.js, Nuxt, SvelteKit ou HTML estático.
-  - Configurar políticas de indexação para SPAs ou aplicações logadas (proteção contra canibalização via noindex).
+  Specialist in technical SEO and Generative Engine Optimization (GEO) for SaaS applications and Landing Pages.
+  Stack- and hosting-agnostic: principles apply across any modern frontend architecture.
+  Activate this skill whenever:
+  - Creating or refactoring Landing Pages, marketing websites, public showcases, blogs, or institutional pages.
+  - Configuring metadata, Open Graph, Twitter Cards, canonical tags, robots.txt, sitemaps, llms.txt, or llms-full.txt.
+  - Implementing structured data (Schema.org / JSON-LD) such as SoftwareApplication, FAQPage, Organization, or BreadcrumbList.
+  - Developing pages with Astro, Vite, Next.js, Nuxt, SvelteKit, or static HTML.
+  - Configuring indexing policies for SPAs or authenticated apps (preventing keyword cannibalization via noindex).
 license: Apache-2.0
 metadata:
   version: v2.0
@@ -17,116 +17,117 @@ metadata:
 
 # SaaS SEO & GEO (Search & AI Engine Optimization)
 
-Padrão arquitetural de SEO tradicional e otimização para motores de IA (GEO) em projetos SaaS.
+Architectural standards for traditional search engine optimization (SEO) and Generative Engine Optimization (GEO) in SaaS products.
 
-> **Como ler esta skill:** cada seção declara primeiro o **princípio** (o que precisa ser verdade e por quê) e depois um **exemplo** numa stack concreta. O princípio é obrigatório; o exemplo é ilustrativo. Ao aplicar num projeto novo, traduza o exemplo para a stack e o provedor de hospedagem daquele projeto.
+> **How to read this skill:** Each section first declares the **principle** (what must hold true and why) followed by an **example** in a concrete stack. The principle is mandatory; the example is illustrative. When applying to a new project, adapt the example to the project's chosen stack and hosting provider.
 
 ---
 
-## 1. Princípio Fundamental: Separação Estrita (LP vs App)
+## 1. Fundamental Principle: Strict Separation (Landing Page vs App)
 
-Toda arquitetura SaaS precisa de uma fronteira explícita de indexação. Sem ela, telas de login, rotas privadas e estados vazios de dashboard competem com a Landing Page pelas mesmas palavras-chave e diluem a autoridade do domínio.
+Every SaaS architecture requires an explicit indexing boundary. Without one, login screens, authenticated views, and empty dashboard states compete with public marketing pages for the same domain keywords, diluting brand and domain authority.
 
-1. **Landing Page e páginas públicas:**
-   * Públicas, estáticas ou renderizadas no servidor (SSR/SSG).
-   * `robots.txt` com `Allow: /`.
-   * Tags canônicas absolutas, dinâmicas e sem parâmetros de campanha (`utm_*`, `fbclid`, etc.).
+1. **Landing Pages and Public Content:**
+   * Publicly accessible, rendered via Static Site Generation (SSG) or Server-Side Rendering (SSR).
+   * `robots.txt` configured with `Allow: /`.
+   * Absolute, dynamic canonical tags stripped of tracking parameters (`utm_*`, `fbclid`, `gclid`, etc.).
 
-2. **Web App logado / Dashboard (SPA / PWA):**
-   * **NUNCA** deve ser indexado.
-   * Obrigatório no `<head>` do HTML de entrada:
+2. **Authenticated Web App / Dashboard (SPA / PWA):**
+   * **MUST NEVER** be indexed by search engines.
+   * Mandatory tag inside the HTML entrypoint `<head>`:
      ```html
      <meta name="robots" content="noindex, nofollow" />
      ```
-   * Reforce também via header HTTP na camada de CDN/edge/proxy do projeto — o header cobre respostas não-HTML e crawlers que não executam JS:
+   * Enforce via HTTP response headers at the CDN, edge, or reverse proxy layer — ensuring non-HTML responses and crawlers that bypass JS execution are covered:
      ```http
      X-Robots-Tag: noindex, nofollow
      ```
-     *Onde configurar depende do provedor: `headers` no `vercel.json`, Transform Rules na Cloudflare, `add_header` no Nginx, `Header set` no Apache, regra de CDN no CloudFront.*
+     *Configuration target depends on provider: `headers` in `vercel.json`, Transform Rules in Cloudflare, `add_header` in Nginx, `Header set` in Apache, or CloudFront Response Headers Policies.*
 
-   > ⚠️ **Não coloque `<link rel="canonical">` numa página `noindex`.** Os dois sinais são contraditórios (um diz "não me indexe", o outro diz "este é o endereço oficial para indexar") e o canonical é ignorado de qualquer forma. Se a página é privada, remova a canonical em vez de apontá-la para lugar nenhum.
+   > ⚠️ **Never place `<link rel="canonical">` on a `noindex` page.** These directives conflict (`noindex` forbids indexing, whereas `canonical` designates the authoritative indexable URL). If a page is private, omit the canonical tag entirely.
 
-   > ⚠️ **Confira o domínio nas tags absolutas.** `canonical`, `og:url` e `og:image` usam URL absoluta e por isso são o ponto mais comum de erro de digitação de domínio (`.com` no lugar de `.com.br`, faltar o subdomínio, apontar para staging). Um `og:image` com domínio errado quebra silenciosamente o preview em WhatsApp e LinkedIn sem nenhum erro em build ou runtime — valide sempre no Facebook Sharing Debugger antes de publicar.
+   > ⚠️ **Validate absolute domains in social tags.** Tags such as `canonical`, `og:url`, and `og:image` require absolute URLs and are prone to domain typos (`.com` vs `.com.br`, missing subdomains, staging URLs). An invalid `og:image` URL silently breaks link previews in WhatsApp, Slack, and LinkedIn without triggering build or runtime errors. Always validate with the Facebook Sharing Debugger and Twitter Card Validator prior to release.
 
-3. **Vitrines públicas dentro de SPAs (ex: `/loja/:slug`):**
-   * Se a vitrine precisa ranquear (perfil de estabelecimento, link público de agendamento, página de profissional), ela **NÃO** pode viver sob um HTML de entrada com `noindex` — o `noindex` vale para todas as rotas servidas por aquele arquivo.
-   * Renderize via SSR/SSG num projeto separado, ou adicione pré-renderização dinâmica no servidor para user-agents de crawler.
+3. **Public Showcases inside SPAs (e.g., `/store/:slug`):**
+   * If a dynamic entity page needs search indexing (public storefronts, appointment scheduling links, public professional profiles), it **CANNOT** be served under a `noindex` HTML shell.
+   * Render these routes via SSR/SSG in a dedicated marketing service, or deploy dynamic server pre-rendering for verified crawler user agents.
 
 ---
 
-## 2. Meta Tags e Social Sharing
+## 2. Meta Tags and Social Sharing
 
-Todo documento HTML público deve incluir:
+Every public HTML document must contain standard head metadata:
 
 ```html
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#0F172A" />
 
-  <!-- Título e descrição primários -->
-  <title>Título Claro e Focado na Solução (até 60 chars) | NomeDaMarca</title>
-  <meta name="description" content="Descrição concisa com proposta de valor, dores resolvidas e chamada para ação (140 a 160 caracteres)." />
+  <!-- Primary Title and Meta Description -->
+  <title>Actionable, Solution-Oriented Title (under 60 chars) | BrandName</title>
+  <meta name="description" content="Concise value proposition detailing problems solved, target audience, and a clear call to action (140-160 characters)." />
 
-  <!-- URL canônica absoluta: dinâmica e limpa de parâmetros de tracking -->
-  <link rel="canonical" href="https://www.dominio.com.br/pagina-atual" />
+  <!-- Absolute Canonical URL: Dynamic and stripped of campaign parameters -->
+  <link rel="canonical" href="https://www.domain.com/current-page" />
 
-  <!-- Favicons e touch icons -->
+  <!-- Favicons and Touch Icons -->
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
-  <!-- Open Graph (WhatsApp, LinkedIn, Facebook, Telegram) -->
+  <!-- Open Graph (WhatsApp, LinkedIn, Facebook, Telegram, Slack) -->
   <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://www.dominio.com.br/pagina-atual" />
-  <meta property="og:locale" content="pt_BR" />
-  <meta property="og:site_name" content="NomeDaMarca" />
-  <meta property="og:title" content="Título do Produto | NomeDaMarca" />
-  <meta property="og:description" content="Descrição idêntica ou complementar com foco em conversão social." />
-  <meta property="og:image" content="https://www.dominio.com.br/og-image.png" />
+  <meta property="og:url" content="https://www.domain.com/current-page" />
+  <meta property="og:locale" content="en_US" />
+  <meta property="og:site_name" content="BrandName" />
+  <meta property="og:title" content="Product Value Proposition | BrandName" />
+  <meta property="og:description" content="Engaging summary optimized for social conversions." />
+  <meta property="og:image" content="https://www.domain.com/og-image.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
-  <meta property="og:image:alt" content="Demonstração visual ou logotipo do NomeDaMarca" />
+  <meta property="og:image:alt" content="Visual overview or logo of BrandName" />
 
   <!-- Twitter Cards -->
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Título do Produto | NomeDaMarca" />
-  <meta name="twitter:description" content="Descrição curta para Twitter/X." />
-  <meta name="twitter:image" content="https://www.dominio.com.br/og-image.png" />
+  <meta name="twitter:title" content="Product Value Proposition | BrandName" />
+  <meta name="twitter:description" content="Short overview for Twitter/X previews." />
+  <meta name="twitter:image" content="https://www.domain.com/og-image.png" />
+</head>
 ```
 
 ---
 
-## 3. Dados Estruturados (Schema.org / JSON-LD)
+## 3. Structured Data (Schema.org / JSON-LD)
 
-Sempre que a página tiver conteúdo correspondente, adicione os blocos JSON-LD no `<head>`.
+Include corresponding JSON-LD structured data blocks inside `<head>` to assist traditional and generative search indexers.
 
-### A. SoftwareApplication (para SaaS)
+### A. SoftwareApplication (for SaaS)
 ```html
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  "name": "NomeDoSaaS",
-  "url": "https://www.dominio.com.br/",
+  "name": "SaaSProductName",
+  "url": "https://www.domain.com/",
   "applicationCategory": "BusinessApplication",
   "operatingSystem": "Web",
-  "description": "Descrição detalhada do software e suas funcionalidades.",
+  "description": "Comprehensive description of software capabilities and key features.",
   "offers": {
     "@type": "Offer",
-    "price": "149.00",
-    "priceCurrency": "BRL",
+    "price": "49.00",
+    "priceCurrency": "USD",
     "priceValidUntil": "2027-12-31",
-    "description": "A partir de R$ XX/mês no plano anual."
+    "description": "Starting at $49/mo on the annual plan."
   }
 }
 </script>
 ```
 
 ### B. FAQPage (GEO & Rich Snippets)
-> **Regra e nuance GEO:** embora o Google tenha reduzido em 2023 os rich snippets visuais de FAQ na SERP para sites comerciais, o `FAQPage` é hoje **o sinal estruturado mais relevante para GEO**. Modelos como Perplexity, ChatGPT Search, Claude e Gemini consomem esses pares de pergunta/resposta para fundamentar respostas e citar a marca como fonte. Todo FAQ visível na página DEVE ter espelho exato em JSON-LD — texto divergente entre o visível e o estruturado é motivo de penalização.
+> **GEO Nuance:** While traditional search engines have reduced visible FAQ rich snippets for commercial websites, `FAQPage` structured data remains **the primary structured signal for Generative Engine Optimization (GEO)**. Large Language Models and AI search engines (Perplexity, ChatGPT Search, Claude, Gemini) consume these question-and-answer pairs directly to ground citations. Every visible FAQ item on the page MUST have an identical representation in JSON-LD — text divergence between UI and structured data risks search penalties.
 
 ```html
 <script type="application/ld+json">
@@ -136,10 +137,10 @@ Sempre que a página tiver conteúdo correspondente, adicione os blocos JSON-LD 
   "mainEntity": [
     {
       "@type": "Question",
-      "name": "Pergunta exata do acordeão?",
+      "name": "Exact question text displayed in the accordion?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Resposta completa e idêntica à exibida visualmente para o usuário."
+        "text": "Complete answer text verbatim matching the visible UI answer."
       }
     }
   ]
@@ -147,38 +148,39 @@ Sempre que a página tiver conteúdo correspondente, adicione os blocos JSON-LD 
 </script>
 ```
 
-### C. Organization (entidade da marca e Knowledge Graph)
+### C. Organization (Brand Entity & Knowledge Graph)
 ```html
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "Organization",
-  "name": "NomeDaEmpresa",
-  "url": "https://www.dominio.com.br",
-  "logo": "https://www.dominio.com.br/logo.png",
+  "name": "CompanyName",
+  "url": "https://www.domain.com",
+  "logo": "https://www.domain.com/logo.png",
   "sameAs": [
-    "https://www.instagram.com/nomedaempresa",
-    "https://www.linkedin.com/company/nomedaempresa"
+    "https://twitter.com/companyname",
+    "https://www.linkedin.com/company/companyname",
+    "https://github.com/companyname"
   ],
   "contactPoint": {
     "@type": "ContactPoint",
     "contactType": "customer support",
-    "telephone": "+55-11-99999-9999",
-    "availableLanguage": ["Portuguese"]
+    "telephone": "+1-800-555-0199",
+    "availableLanguage": ["English"]
   }
 }
 </script>
 ```
 
-### D. BreadcrumbList (páginas secundárias e blog)
+### D. BreadcrumbList (Subpages and Documentation/Blog)
 ```html
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "BreadcrumbList",
   "itemListElement": [
-    { "@type": "ListItem", "position": 1, "name": "Início", "item": "https://www.dominio.com.br/" },
-    { "@type": "ListItem", "position": 2, "name": "Nome da Subpágina", "item": "https://www.dominio.com.br/subpagina" }
+    { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.domain.com/" },
+    { "@type": "ListItem", "position": 2, "name": "Features", "item": "https://www.domain.com/features" }
   ]
 }
 </script>
@@ -186,69 +188,69 @@ Sempre que a página tiver conteúdo correspondente, adicione os blocos JSON-LD 
 
 ---
 
-## 4. Otimização para Motores de IA: `llms.txt` & `llms-full.txt` (GEO)
+## 4. Generative Engine Optimization (GEO): `llms.txt` & `llms-full.txt`
 
-Na pasta pública servida na raiz do domínio, forneça arquivos Markdown estruturados para consumo por agentes de IA e crawlers semânticos.
+In the public root directory (`/public` served at domain root), provide structured Markdown files specifically tailored for AI search agents and semantic web crawlers.
 
-### A. `llms.txt` (índice conciso e rotas)
+### A. `llms.txt` (Concise Index and Key Routes)
 
-Um resumo denso da proposta de valor seguido de links rotulados. O primeiro parágrafo é o que mais importa: é dele que os modelos extraem a descrição da marca ao citá-la.
+A dense summary of the product value proposition followed by categorized links. The first paragraph is critical: AI models extract this opening description when generating brand overviews.
 
 ```markdown
-# NomeDoProduto
+# ProductName
 
-> Resumo em uma linha da proposta de valor, público-alvo e modelo de negócio.
+> One-line summary of the core value proposition, target customer segment, and business model.
 
-Descrição detalhada com palavras-chave de intenção de busca, público atendido, funcionalidades
-principais, modelos de precificação (com valores reais) e diferenciais competitivos.
+Detailed product summary highlighting search-intent keywords, supported industries,
+flagship capabilities, transparent pricing models (including exact numbers), and key market differentiators.
 
-## Produto
+## Product
 
-- [Site](https://www.dominio.com.br/): Landing page oficial
-- [Preços](https://www.dominio.com.br/#precos): Valores e planos
-- [FAQ](https://www.dominio.com.br/#faq): Perguntas frequentes
-- [Documentação completa](https://www.dominio.com.br/llms-full.txt): Contexto integral para LLMs
+- [Website](https://www.domain.com/): Official marketing website
+- [Pricing](https://www.domain.com/#pricing): Subscription plans and tiers
+- [FAQ](https://www.domain.com/#faq): Frequently asked questions
+- [Full Context](https://www.domain.com/llms-full.txt): Complete technical documentation for LLMs
 
-## App / Acesso
+## App / Access
 
-- [Criar conta](https://app.dominio.com.br/register): Teste grátis
-- [Entrar](https://app.dominio.com.br/login): Login de clientes
+- [Sign Up](https://app.domain.com/register): Free trial registration
+- [Log In](https://app.domain.com/login): Customer dashboard authentication
 
-## Contato
+## Support & Socials
 
-- [Instagram](https://instagram.com/marca): Conteúdo e novidades
-- [Suporte](https://ig.me/m/marca): Atendimento
+- [Twitter](https://twitter.com/brand): Updates and product announcements
+- [Support](https://help.domain.com/): Knowledge base and helpdesk
 
 ## Optional
 
-- [Sitemap](https://www.dominio.com.br/sitemap.xml): URLs indexáveis
-- [robots.txt](https://www.dominio.com.br/robots.txt): Regras de robôs
+- [Sitemap](https://www.domain.com/sitemap.xml): Indexable URL inventory
+- [robots.txt](https://www.domain.com/robots.txt): Crawler access rules
 ```
 
-> Inclua preços, cupons e condições comerciais reais em texto corrido. Modelos generativos citam esses números diretamente ao responder "quanto custa X" — deixar isso de fora entrega a resposta para um concorrente que incluiu.
+> **State clear pricing and terms:** Include real numbers and plan specifics in plain text. Generative models directly quote these details when answering user queries such as "How much does X cost?". Omitting pricing hands the recommendation to competitors who disclose theirs.
 
-### B. `llms-full.txt` (contexto completo)
-Para modelos com janelas de contexto amplas, compile uma versão agregada em Markdown com:
-1. Detalhamento completo de cada funcionalidade.
-2. Todas as perguntas e respostas do FAQ.
-3. Tabelas comparativas com alternativas de mercado.
-4. Políticas de suporte, segurança de dados e integrações suportadas.
+### B. `llms-full.txt` (Comprehensive Context)
+For models with large context windows, assemble a consolidated Markdown document containing:
+1. Exhaustive breakdown of every product feature and workflow.
+2. Complete questions and answers from all FAQ sections.
+3. Feature comparison matrices against market alternatives.
+4. Support policies, data security/privacy standards, and integration specifications.
 
-Gere esse arquivo no build a partir das mesmas fontes do site (coleções de conteúdo, JSON de FAQ) em vez de mantê-lo à mão — arquivo duplicado manualmente desatualiza e passa a mentir sobre o produto.
+Generate this file at build time from the single source of truth (content collections, FAQ data modules) rather than maintaining it manually to prevent outdated information.
 
 ---
 
-## 5. Rastreabilidade & Clean URLs
+## 5. Crawlability & Clean URLs
 
 **1. `robots.txt`:**
 ```txt
 User-agent: *
 Allow: /
 
-# Bloqueia rotas de API interna ou callbacks
+# Block internal API endpoints and private callbacks
 Disallow: /api/
 
-Sitemap: https://www.dominio.com.br/sitemap.xml
+Sitemap: https://www.domain.com/sitemap.xml
 ```
 
 **2. `sitemap.xml`:**
@@ -256,19 +258,19 @@ Sitemap: https://www.dominio.com.br/sitemap.xml
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://www.dominio.com.br/</loc>
+    <loc>https://www.domain.com/</loc>
     <lastmod>2026-09-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
 </urlset>
 ```
-Gere o sitemap no build sempre que o framework permitir (`@astrojs/sitemap`, `next-sitemap`, `nuxt/sitemap`). Sitemap escrito à mão desatualiza no primeiro deploy que adiciona uma página.
+Generate sitemaps automatically during the build process using framework integrations (`@astrojs/sitemap`, `next-sitemap`, `nuxt/sitemap`). Manually maintained sitemaps drift out of sync immediately upon adding new pages.
 
-**3. URL canônica única (clean URLs):**
-Princípio: cada conteúdo deve responder em **um** endereço só. `/pagina`, `/pagina/` e `/pagina.html` servindo o mesmo HTML é conteúdo duplicado e divide sinais de ranqueamento. Escolha uma forma e redirecione (301) as demais.
+**3. Single Canonical URL Structure (Clean URLs):**
+Principle: Every piece of content must resolve to exactly **one** URL. Serving the same HTML from `/page`, `/page/`, and `/page.html` creates duplicate content and splits ranking signals. Select a canonical standard and issue permanent (301) redirects for all variants.
 
-*Como declarar, por provedor:*
+*Provider configurations:*
 ```json
 // Vercel (vercel.json)
 { "cleanUrls": true, "trailingSlash": false }
@@ -278,18 +280,18 @@ Princípio: cada conteúdo deve responder em **um** endereço só. `/pagina`, `/
 rewrite ^/(.*)\.html$ /$1 permanent;
 rewrite ^/(.+)/$ /$1 permanent;
 ```
-Na Cloudflare Pages, equivale a habilitar as regras de normalização de URL; no Netlify, `pretty_urls`. Em SSG com framework, normalmente é opção de config (`trailingSlash` no Astro/Next/Nuxt).
+On Cloudflare Pages, enable URL Normalization; on Netlify, configure `pretty_urls`. In framework SSG, set options such as `trailingSlash: 'never'` in Astro, Next.js, or Nuxt.
 
 ---
 
-## 6. Escolha de Stack para Landing Pages
+## 6. Landing Page Stack Selection
 
-**Princípio:** a LP deve entregar HTML completo no primeiro byte, sem depender de JavaScript para renderizar conteúdo indexável, e permitir reuso de componentes (header, footer, bloco de SEO, FAQ) conforme o número de páginas cresce. HTML estático escrito à mão atende o primeiro requisito e falha no segundo: a partir de ~5 páginas, cabeçalhos, scripts de analytics e blocos JSON-LD passam a ser copiados e colados, e divergem.
+**Principle:** Marketing landing pages must deliver fully rendered HTML on the very first byte with zero client-side JavaScript required for indexable content, while supporting component reusability (`<Header />`, `<Footer />`, `<SEO />`, `<FAQ />`) as the page count expands. Handcrafted static HTML meets the performance goal but fails at scale: past ~5 pages, shared headers, analytics snippets, and JSON-LD schemas inevitably diverge due to copy-pasting.
 
-**Default recomendado:** se o projeto não tem stack definida por outro motivo, **Astro** é o melhor ponto de partida:
-* Gera HTML estático com 0kb de JavaScript cliente por padrão.
-* Componentiza `<Header />`, `<Footer />`, `<SEO />`, `<FAQ />`.
-* Coleções de conteúdo em Markdown/MDX habilitam SEO programático (páginas por nicho, cidade, caso de uso) de forma escalável.
-* Integração nativa de `sitemap.xml` e RSS via `@astrojs/sitemap`.
+**Recommended Default:** If the project has no preexisting framework requirements, **Astro** is the optimal choice:
+* Generates static HTML with 0 KB of client JavaScript by default.
+* Provides full component composition (`<Header />`, `<Footer />`, `<SEO />`, `<FAQ />`).
+* Markdown/MDX content collections enable scalable programmatic SEO (pages segmented by niche, city, or use case).
+* Native sitemap and RSS generation via `@astrojs/sitemap`.
 
-**Quando escolher outra coisa:** se o time já opera Next.js ou Nuxt em outro produto e a LP vai compartilhar componentes, design system ou pipeline de deploy com ele, a consistência operacional vale mais do que os kilobytes economizados — use a stack que já existe. Da mesma forma, uma LP de página única e estável não justifica migrar nada.
+**When to choose alternatives:** If your team already operates a Next.js or Nuxt codebase and the landing page shares design systems, component libraries, or deployment pipelines, operational consistency outweighs a few kilobytes saved — use the existing framework. Likewise, a single, stable static page does not warrant migrating stacks.

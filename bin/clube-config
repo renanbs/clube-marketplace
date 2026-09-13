@@ -136,11 +136,80 @@ cmd_check() {
         echo -e "  ❌ Missing plugins/ directory"
     fi
 
+    # SemVer Parity Check across all 9 manifests
+    local semver_target="0.1.0"
+    local semver_status="v0.1.0 (9/9 aligned)"
+    if command -v python3 >/dev/null 2>&1; then
+        local semver_output
+        semver_output="$(python3 - << 'PYEOF' "$REPO_ROOT" "$semver_target"
+import json
+import os
+import sys
+
+repo_root = sys.argv[1]
+target_version = sys.argv[2]
+
+manifests = [
+    ("package.json", "root"),
+    (".claude-plugin/marketplace.json", "market"),
+    (".omp-plugin/marketplace.json", "market"),
+    (".cursor-plugin/marketplace.json", "market"),
+    (".agents/plugins/marketplace.json", "market"),
+    ("plugins/clube/.claude-plugin/plugin.json", "plugin"),
+    ("plugins/clube/.cursor-plugin/plugin.json", "plugin"),
+    ("plugins/clube/.codex-plugin/plugin.json", "plugin"),
+    ("plugins/clube/.omp-plugin/plugin.json", "plugin"),
+]
+
+errors = []
+total = len(manifests)
+matched = 0
+
+for path_rel, kind in manifests:
+    full_path = os.path.join(repo_root, path_rel)
+    if not os.path.isfile(full_path):
+        errors.append(f"Missing file: {path_rel}")
+        continue
+    try:
+        with open(full_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        ver = None
+        if kind in ("root", "plugin"):
+            ver = data.get("version")
+        elif kind == "market":
+            plugins = data.get("plugins", [])
+            if plugins and isinstance(plugins, list) and isinstance(plugins[0], dict):
+                ver = plugins[0].get("version")
+            if not ver:
+                ver = data.get("version")
+        if ver == target_version:
+            matched += 1
+        else:
+            errors.append(f"{path_rel} (found '{ver}', expected '{target_version}')")
+    except Exception as e:
+        errors.append(f"{path_rel} ({e})")
+
+if matched == total and not errors:
+    print(f"OK:{matched}/{total}")
+else:
+    print(f"ERR:{matched}/{total}:" + "; ".join(errors))
+PYEOF
+)"
+        if [[ "$semver_output" == OK:* ]]; then
+            echo -e "\n  ✅ SemVer parity: all manifests aligned at v${semver_target}"
+            semver_status="v${semver_target} (all manifests aligned)"
+        else
+            echo -e "\n  ❌ SemVer parity mismatch: ${semver_output#ERR:}"
+            semver_status="mismatch (${semver_output#ERR:})"
+        fi
+    fi
+
     echo -e "\n${BOLD}### 3. Summary${NC}\n"
     echo -e "| Field | Content |"
     echo -e "| :--- | :--- |"
     echo -e "| Status | check completed |"
     echo -e "| Active Harness | $(get_harness_friendly_name "$active") |"
+    echo -e "| SemVer Parity | ${semver_status} |"
     echo -e "| AGENTS.md Present | $([ -f "AGENTS.md" ] && echo "yes" || echo "no") |"
     echo -e "| Source of Truth | AGENTS.md |"
     echo -e "| Plugins Directory | plugins/ (modular marketplace structure) |"

@@ -1,145 +1,145 @@
 ---
 name: data-privacy-observability
 description: |
-  Especialista em tratamento de dados pessoais em logs, telemetria, erros e analytics.
-  Agnóstica de stack e de linguagem: cada seção declara o princípio e exemplifica numa stack concreta.
-  Ative esta skill sempre que:
-  - Escrever ou revisar logging, structured logging, tracing ou métricas que toquem dados de usuário.
-  - Instrumentar erros com Sentry, Rollbar, Datadog, Grafana ou similar.
-  - Lidar com telefone, e-mail, CPF/CNPJ, endereço, cartão, documento ou qualquer PII em código de backend ou frontend.
-  - Depurar um bug cujo diagnóstico exige ver dados reais de cliente.
-  - Montar dashboards, eventos de analytics ou exportações que agreguem dados de usuário.
-  - Implementar retenção, anonimização, exclusão de conta ou resposta a pedido de titular (LGPD/GDPR).
+  Specialist in personal data handling across logs, telemetry, error tracking, and analytics.
+  Stack- and language-agnostic: declarations of core principles accompanied by concrete implementation examples.
+  Activate this skill whenever:
+  - Writing or reviewing logging, structured logging, tracing, or metrics touching user data.
+  - Instrumenting error tracking with Sentry, Rollbar, Datadog, Grafana, or similar platforms.
+  - Handling phone numbers, email addresses, tax IDs (SSN, CPF/CNPJ), addresses, payment cards, or any PII in backend or frontend code.
+  - Debugging issues whose investigation requires inspecting production user data.
+  - Building dashboards, analytics events, or data exports aggregating user data.
+  - Implementing retention policies, data anonymization, account deletion, or subject access requests (GDPR/LGPD).
 license: Apache-2.0
 metadata:
   version: v1.0
   author: clubedepontos
 ---
 
-# Privacidade de Dados em Logs e Observabilidade
+# Data Privacy in Logging & Observability Playbook
 
-Como instrumentar um sistema para ser depurável **sem** transformar o agregador de logs num banco de dados pessoais paralelo, sem retenção, sem controle de acesso e fora de qualquer política.
+How to instrument systems for maximum debuggability **without** turning log aggregators into parallel, unmanaged personal data repositories lacking retention limits, access controls, or governance.
 
-> **Como ler esta skill:** cada seção declara primeiro o **princípio** e depois um **exemplo** numa stack concreta (Go no backend, JavaScript no frontend). O princípio é o que viaja entre projetos; o exemplo se traduz.
+> **How to read this skill:** Each section first declares the **principle** followed by an **example** in a concrete stack (Go on the backend, JavaScript on the frontend). The principle applies universally across stacks; the example translates directly to the target environment.
 
 ---
 
-## 1. O Princípio Central: logue a FORMA do dado, não o dado
+## 1. The Core Principle: Log the SHAPE of Data, Not the Data Itself
 
-A escolha não é entre "logar o telefone do cliente" e "não logar nada". Essa falsa dicotomia é o que leva times a logar PII em claro — porque a alternativa aparente é ficar cego.
+Engineers often assume the choice is between "logging raw customer PII" and "logging nothing at all." This false dichotomy is why teams inadvertently log plaintext PII — believing the alternative is total operational blindness.
 
-**O que você precisa em produção quase nunca é o valor.** É a *forma* do valor: o dado chegou? tem o tamanho certo? veio com máscara de formatação? é do país esperado? é o mesmo entre duas requisições? Tudo isso é observável sem materializar o dado.
+**In production debugging, you rarely need the raw value.** What you need is the *shape* and properties of the value: Did the field arrive? Does it match the expected length? Is it formatted with an unexpected mask? Is it from the expected region/country? Does it match across multiple requests? All of these properties are observable without ever materializing raw personal data.
 
-Para cada campo sensível, crie um helper que exponha **o mínimo necessário para depurar** e nada além:
+For each sensitive field, implement a dedicated helper exposing **the minimum information necessary to debug** and nothing more:
 
 ```go
 package phonelog
 
-// Mask exibe DDD + meio mascarado + últimos 4 dígitos (ex.: "11*****4321").
-// Suficiente para o suporte confirmar com o cliente "é o número terminado em 4321?"
-// sem que o número completo exista em nenhum log.
+// Mask displays country/area code + masked middle + last 4 digits (e.g., "11*****4321").
+// Sufficient for customer support to verify "is this the number ending in 4321?"
+// without the full phone number existing anywhere in log storage.
 func Mask(phone string) string { /* ... */ }
 
-// DDD retorna o código de área. Permite agregar e detectar anomalia regional
-// (ex.: pico de cadastros de um DDD só) sem identificar ninguém.
-func DDD(phone string) string { /* ... */ }
+// AreaCode returns the telephone area code. Enables detecting regional anomalies
+// (e.g., an unexpected spike in signups from a single area code) without identifying users.
+func AreaCode(phone string) string { /* ... */ }
 
-// DigitCount retorna a quantidade de dígitos após normalização.
-// É isto que responde "o número chegou truncado?" — a pergunta real do bug.
+// DigitCount returns the total count of digits after normalization.
+// Directly answers the real debugging question: "Was the phone number truncated?"
 func DigitCount(phone string) int { /* ... */ }
 ```
 
-No ponto de uso:
+Usage in application handlers:
 ```go
-logger.Log.Warn("falha ao enviar confirmação",
+logger.Log.Warn("failed to deliver confirmation",
     zap.String("phone", phonelog.Mask(customer.Phone)),
     zap.Int("phone_digits", phonelog.DigitCount(customer.Phone)),
     zap.String("appointment_id", appt.ID),
 )
 ```
 
-**Teste os helpers de mascaramento.** São código de segurança com aparência de formatação de string: um off-by-one que expõe um dígito a mais não quebra nada e não aparece em code review, mas muda o que fica retido em produção. Cubra caso vazio, curto demais, com e sem DDI, com pontuação.
+**Unit test all masking helpers.** Masking helpers are security controls disguised as string manipulation: an off-by-one error exposing an extra digit will not crash the build or trigger alarms in basic code review, but silently alters data retention in production. Test empty inputs, short strings, valid/invalid formats, with and without country codes, and international dial codes.
 
-### Formas de máscara por tipo de dado
+### Recommended Masking Formats by Data Type
 
-| Dado | Logue | Nunca logue |
+| Data Type | Log This | Never Log |
 | :--- | :--- | :--- |
-| Telefone | DDD + `*****` + últimos 4 | número completo |
-| E-mail | domínio + 1ª letra (`r***@dominio.com`) ou hash estável | endereço completo |
-| CPF/CNPJ | últimos 3 dígitos, ou só "válido/inválido" | documento completo, mesmo parcial no meio |
-| Cartão | bandeira + últimos 4 (padrão PCI-DSS) | PAN, CVV ou validade — em hipótese nenhuma |
-| Endereço | cidade/UF, ou CEP truncado nos 5 primeiros | logradouro, número, complemento |
-| Nome | iniciais, ou omita | nome completo |
-| Token/senha/chave | comprimento e prefixo de 4 chars, no máximo | o valor, nem "só pra debugar" |
-| ID interno (UUID) | completo — é pseudônimo, não PII | — |
+| **Phone Number** | Area code + `*****` + last 4 digits | Full phone number |
+| **Email Address** | Domain + first letter (`r***@domain.com`) or salted hash | Full email address |
+| **National Tax ID / SSN / CPF** | Last 3 or 4 digits, or validation status (`valid/invalid`) | Full document ID, even with middle masking |
+| **Payment Card (PCI-DSS)** | Card brand + last 4 digits | Full PAN, CVV, or expiration date under any circumstance |
+| **Postal Address** | City / State, or truncated postal code (first 5 digits) | Street address, building number, apartment/unit |
+| **Full Name** | First initial + last initial, or omit entirely | Full legal name |
+| **Tokens / API Keys / Passwords** | Token length + first 4 prefix characters at most | Full secret value, even during local debugging |
+| **Internal UUID / Entity ID** | Full UUID (pseudonymous identifier, not PII) | — |
 
-> **Prefira o ID ao dado.** Na maioria dos bugs, `user_id` + `appointment_id` levam o dev ao registro no banco, onde o acesso é controlado e auditado. O log só precisa da chave, não do conteúdo. Se o log tem ID suficiente, ele não precisa de PII nenhuma.
+> **Prefer Entity IDs Over Raw Data:** In almost every debugging scenario, `user_id` and `order_id` allow an authorized engineer to look up the authoritative database record under strict, audited access controls. Logs only require the correlation key, not the raw personal payload.
 
 ---
 
-## 2. Hash estável quando você precisa correlacionar
+## 2. Salted Stable Hashing for User Correlation
 
-Quando a pergunta é "é o mesmo usuário nas duas pontas?" e não "quem é o usuário?", use hash com salt fixo de aplicação. Isso permite `GROUP BY` e correlação entre serviços sem valor reversível no log.
+When debugging requires answering "Did the same user initiate both requests?" rather than "Who is this user?", use SHA256 hashing with a secret, application-level salt. This enables `GROUP BY` aggregation and distributed cross-service correlation without writing reversible PII to logs.
 
 ```go
 func StableHash(value string) string {
     sum := sha256.Sum256([]byte(appSalt + strings.ToLower(strings.TrimSpace(value))))
-    return hex.EncodeToString(sum[:])[:12] // 12 chars bastam para correlacionar
+    return hex.EncodeToString(sum[:])[:12] // 12 characters provide sufficient correlation entropy
 }
 ```
 
-Dois cuidados:
-* **Normalize antes de hashear** (minúsculas, trim, só dígitos), ou o mesmo dado gera hashes diferentes e a correlação falha silenciosamente.
-* **Hash de dado de baixa entropia é reversível por força bruta.** CPF tem 11 dígitos e telefone brasileiro tem ~11 — o espaço inteiro é enumerável em minutos. O salt de aplicação é o que impede isso, então ele é segredo de verdade: variável de ambiente, nunca no repositório. Sem salt, hashear CPF é teatro de privacidade.
+Two critical requirements:
+* **Normalize values before hashing** (lowercase, trim whitespace, strip formatting characters). Otherwise identical inputs produce divergent hashes, breaking correlation silently.
+* **Low-entropy data is vulnerable to dictionary and brute-force attacks.** National IDs and standard phone numbers have small search spaces easily enumerated in minutes. A high-entropy application salt (stored securely in environment variables, never hardcoded in code) is mandatory to prevent rainbow table reversal.
 
 ---
 
-## 3. O vazamento mais comum: serialização de struct inteira
+## 3. The Most Common Leak: Blind Struct Serialization
 
-Quase todo vazamento de PII em log vem de uma linha escrita para depurar e esquecida:
+The vast majority of PII leaks in log storage stem from temporary debugging statements left in production code:
 
 ```go
-log.Printf("payload: %+v", req)        // ❌ despeja o struct todo
-logger.Info("user", zap.Any("u", user)) // ❌ idem
-console.log('checkout', payload)        // ❌ idem, no browser
+log.Printf("payload: %+v", req)        // ❌ Dumps the entire request struct
+logger.Info("user", zap.Any("u", user)) // ❌ Dumps all struct fields
+console.log('checkout', payload)        // ❌ Dumps sensitive client payload to browser console
 ```
 
-O problema não é a intenção, é que **o conjunto de campos cresce sem o log ser revisitado**. A linha foi escrita quando o struct tinha 3 campos; hoje tem 20, incluindo CPF e endereço, e ninguém releu aquele `%+v`.
+The underlying issue is structural drift: **struct fields expand over time without historical log statements being updated**. A log statement written when a struct had 3 non-sensitive fields later dumps 20 fields including tax IDs and home addresses after domain model refactoring.
 
-**Regras:**
-1. **Nunca serialize um struct de domínio, request ou response inteiro num log.** Liste campos explicitamente, sempre. É o mesmo princípio do `zero SELECT *` na camada de persistência, pela mesma razão.
-2. **Implemente o marshaller do tipo sensível para já sair mascarado**, assim o erro deixa de ser possível em vez de depender de disciplina:
+**Mandatory Rules:**
+1. **Never serialize entire domain models, request bodies, or response payloads into logs.** Explicitly enumerate logged fields. Apply the same discipline as `zero SELECT *` in persistence layers.
+2. **Implement custom string and JSON marshallers on sensitive domain types** so that accidental dumps output masked representations by default:
    ```go
    type Phone string
 
-   func (p Phone) String() string        { return phonelog.Mask(string(p)) }
+   func (p Phone) String() string               { return phonelog.Mask(string(p)) }
    func (p Phone) MarshalJSON() ([]byte, error) { return json.Marshal(phonelog.Mask(string(p))) }
    ```
-   Em Python, `__repr__`; em Java, `toString()`; em TypeScript, um branded type com `toJSON()`.
-3. **Trate erro de banco e de driver como conteúdo sensível.** Mensagens de erro de constraint frequentemente embutem o valor que violou a constraint (`duplicate key value violates unique constraint ... Key (email)=(fulano@x.com)`). Logar `err` cru vaza o valor. Logue o código do erro e a constraint, não a mensagem inteira.
+   Equivalents: `__repr__` in Python; `toString()` in Java; branded types with `toJSON()` in TypeScript.
+3. **Treat database driver and constraint errors as sensitive.** Database constraint violation messages frequently echo the violating input value verbatim (e.g., `duplicate key value violates unique constraint ... Key (email)=(user@example.com)`). Logging raw errors leaks PII. Log the structured error code and constraint identifier, not the raw driver error message.
 
 ---
 
-## 4. Superfícies esquecidas
+## 4. Frequently Overlooked Data Surfaces
 
-O log de aplicação é a superfície óbvia. Estas são as que passam:
+Application log streams are only one surface. Audit and protect the following channels:
 
-* **Rastreador de erros (Sentry/Rollbar).** Captura variáveis locais do stack frame automaticamente. Configure o `before_send` / scrubbing para remover campos sensíveis por nome, e desative o envio de request body por padrão.
-* **Tracing distribuído.** Atributos de span viram searchable text. `db.statement` com valores interpolados vaza o dado; com parâmetros ligados, não — é mais um motivo para nunca interpolar valor em query.
-* **Labels de métrica.** Nunca use PII como label de Prometheus: além de vazar, é cardinalidade ilimitada (ver a skill de performance). Métrica é agregado; se precisa identificar alguém, não é métrica.
-* **URL e query string.** Aparecem em log de acesso, de CDN, no `Referer` enviado a terceiros e no histórico do browser. Nunca coloque token, e-mail, CPF ou documento em path ou query — use corpo de requisição ou header.
-* **`console.log` no frontend.** Fica visível para o usuário e para qualquer extensão instalada, e é capturado por ferramentas de session replay. Trate o console de produção como log público.
-* **Session replay (Hotjar, Clarity, FullStory).** Grava o DOM, incluindo o que o usuário digita. Exige marcação explícita de exclusão nos campos sensíveis — normalmente um atributo por campo. Campo de senha, cartão e documento sempre mascarado.
-* **Corpo de webhook e payload de gateway.** Logar a resposta bruta do gateway de pagamento "para depurar" é o caminho mais rápido para ter dado de cartão em texto puro no agregador.
-* **Dump de banco em ambiente de desenvolvimento.** Restaurar dump de produção em stage ou local espalha a base de dados pessoais inteira para máquinas sem controle de acesso. Use dados sintéticos ou um dump anonimizado; se precisar de dado real, anonimize no momento da extração, não depois.
+* **Error Tracking Platforms (Sentry / Rollbar):** Automatically capture local stack frame variables and HTTP request bodies. Configure `before_send` scrubbing hooks to redact sensitive keys and disable default request body capturing.
+* **Distributed Tracing (OpenTelemetry):** Span attributes are indexed, searchable text. Never interpolate sensitive values directly into `db.statement` attributes; use parameterized query representations.
+* **Prometheus Metric Labels:** Never use PII as Prometheus metric labels. In addition to leaking personal data, unbounded label cardinality exhausts metrics backend memory.
+* **URLs and Query Strings:** Query parameters appear in CDN edge logs, reverse proxy access logs, HTTP `Referer` headers sent to third-party assets, and browser history. Never pass tokens, email addresses, or tax IDs in query parameters — use request bodies or Authorization headers.
+* **Frontend `console.log`:** Output is visible to users, browser extensions, and captured by session replay scripts. Treat the production client console as a public broadcast channel.
+* **Session Replay Tools (Hotjar, FullStory, Clarity):** Record DOM state including user input. Explicitly annotate input fields with exclusion attributes (`data-private`, `fs-mask`). Payment cards, passwords, and identity documents must be masked.
+* **Webhook Bodies & Payment Gateway Callbacks:** Logging raw payment gateway payloads during checkout integration dumps customer credit card metadata into log aggregators.
+* **Development Database Dumps:** Restoring raw production database dumps to local developer workstations or unhardened staging environments exposes personal data to uncontrolled environments. Always generate synthetic data or sanitize production dumps at the extraction point.
 
 ---
 
-## 5. Auditoria: o que você DEVE registrar
+## 5. Auditing: What You MUST Record
 
-Privacidade não é logar menos — é logar a coisa certa. Acesso privilegiado a dado de cliente deve ser registrado de forma **mais** completa, não menos.
+Data privacy does not mean logging less — it means logging the right things. Privileged administrative access to customer data requires **more** comprehensive auditing, not less.
 
-**Toda sessão de impersonação, acesso administrativo a dado de cliente ou exportação em massa gera registro de auditoria** com: quem acessou, quem foi acessado, quando, o quê e por quê.
+**Every impersonation session, administrative customer lookup, or bulk data export must generate an audit log** recording: who accessed, target user ID, timestamp, HTTP method, and route.
 
 ```go
 func ImpersonationReadOnly() gin.HandlerFunc {
@@ -150,7 +150,7 @@ func ImpersonationReadOnly() gin.HandlerFunc {
             return
         }
 
-        // 1. Toda requisição impersonada é auditada — inclusive as bem-sucedidas.
+        // 1. Every impersonated request is audited — including successful GET reads.
         logger.Log.Info("impersonated request",
             zap.String("impersonator_id", impersonatorID.(string)),
             zap.String("target_user_id", c.GetString("userID")),
@@ -158,7 +158,7 @@ func ImpersonationReadOnly() gin.HandlerFunc {
             zap.String("path", c.Request.URL.Path),
         )
 
-        // 2. Impersonação é somente leitura: suporte vê, suporte não age pelo cliente.
+        // 2. Impersonation is strictly read-only: support staff can inspect but never mutate on behalf of customers.
         if c.Request.Method != http.MethodGet {
             c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
                 "error":      "read-only impersonation session",
@@ -172,32 +172,34 @@ func ImpersonationReadOnly() gin.HandlerFunc {
 }
 ```
 
-As duas travas são independentes e ambas necessárias. **Somente leitura** garante que nenhuma ação fique atribuída ao cliente sem que ele a tenha feito — sem isso, o histórico da conta deixa de ser confiável como prova. **Auditoria de toda requisição** (não só das negadas) é o que permite responder "quem da equipe olhou os dados deste cliente?", que é uma pergunta que o titular tem direito de fazer.
+Both controls are mandatory:
+1. **Read-Only Enforcement:** Guarantees that support or administrative actions cannot be falsely attributed to the customer in billing or operational histories.
+2. **Comprehensive Request Auditing:** Logging all requests (not merely rejected attempts) provides full traceability when responding to data subject access inquiries ("Who in the company accessed my records?").
 
-O log de auditoria tem regras próprias: retenção mais longa, acesso mais restrito que o log de aplicação, e é append-only. Não misture com o log operacional.
-
----
-
-## 6. Retenção e direito do titular
-
-* **Defina retenção por tipo de log** e configure no agregador: log de aplicação curto (7–30 dias), auditoria longo (conforme a política/obrigação legal). Log sem política de retenção é retenção infinita — e um pedido de exclusão que você não consegue cumprir.
-* **Um pedido de exclusão de conta precisa alcançar os logs.** É a razão prática mais forte para não ter PII neles: se o log só tem `user_id` e valores mascarados, apagar o registro no banco resolve; se tem e-mail e telefone em claro espalhados por 90 dias de log em três serviços, não tem como cumprir o pedido.
-* **Minimize na origem.** Não colete campo que o produto não usa. Todo campo coletado vira campo a proteger, mascarar, reter, exportar sob pedido e vazar num incidente.
-* **Base legal antes de enviar a terceiros.** Mandar dado de cliente para plataforma de anúncio, CRM ou ferramenta de analytics é tratamento de dado pessoal e precisa estar coberto na política de privacidade e respeitar a escolha do usuário quando houver consentimento — inclusive no disparo server-side, que não é brecha para ignorar uma recusa dada no banner.
+Audit logs require distinct operational policies: longer retention, strictly segregated access permissions, and append-only immutability. Never mix audit logs into standard application stdout streams.
 
 ---
 
-## Checklist
+## 6. Retention Policies & Data Subject Rights
 
-- [ ] Todo campo sensível tem helper de máscara, e o helper tem teste unitário?
-- [ ] O log usa ID (`user_id`, `order_id`) em vez do dado sempre que o ID basta para chegar no registro?
-- [ ] Nenhum log serializa struct de domínio, request ou response inteiro (`%+v`, `zap.Any`, `console.log(obj)`)?
-- [ ] Tipos sensíveis implementam `String()`/`MarshalJSON()` já mascarados?
-- [ ] Erros de banco são logados por código/constraint, não pela mensagem crua?
-- [ ] Rastreador de erros com scrubbing configurado e envio de request body desligado?
-- [ ] Nenhuma PII como label de métrica, atributo de span, path ou query string?
-- [ ] Session replay com campos sensíveis marcados para exclusão?
-- [ ] Impersonação e acesso administrativo são somente leitura e geram auditoria de toda requisição?
-- [ ] Log de auditoria separado do operacional, com retenção maior e acesso restrito?
-- [ ] Retenção configurada por tipo de log no agregador?
-- [ ] Ambiente de desenvolvimento usa dado sintético ou dump anonimizado, nunca dump de produção cru?
+* **Define Retention per Log Category:** Configure automated lifecycle policies in log aggregators: short retention for application debug logs (7–30 days), extended retention for security audit logs according to statutory requirements.
+* **Ensure Account Deletion Reaches Logs:** When logs contain only pseudonymous entity IDs (`user_id`, `order_id`) and masked strings, deleting the authoritative database record effectively satisfies Right to Erasure / GDPR Article 17 requests. Plaintext PII scattered across three months of unindexed logs makes compliant deletion impossible.
+* **Data Minimization at the Source:** Never collect fields the product does not actively use. Every collected field increases the blast radius of data breaches and subject access compliance overhead.
+* **Legal Basis for Third-Party Dispatches:** Forwarding customer data to advertising networks, CRMs, or analytics platforms constitutes personal data processing. It must be disclosed in privacy policies and respect user consent preferences — server-side tracking cannot be used to circumvent client cookie consent rejections.
+
+---
+
+## Verification Checklist
+
+- [ ] Every sensitive field has a dedicated masking helper backed by unit tests?
+- [ ] Logs reference entity IDs (`user_id`, `order_id`) instead of raw data wherever IDs suffice for database lookup?
+- [ ] No log statement serializes full domain models, request bodies, or responses (`%+v`, `zap.Any`, `console.log(obj)`)?
+- [ ] Sensitive domain types implement custom `String()` / `MarshalJSON()` methods with automatic masking?
+- [ ] Database constraint errors are logged by structured error code and constraint name rather than raw driver error strings?
+- [ ] Error tracking platforms (Sentry/Rollbar) have data scrubbing enabled and raw request body capture disabled?
+- [ ] Zero PII exists in Prometheus metric labels, distributed tracing span attributes, URL paths, or query parameters?
+- [ ] Session replay tools have sensitive DOM input fields explicitly annotated for masking/exclusion?
+- [ ] User impersonation and administrative data access are strictly read-only and generate comprehensive audit logs?
+- [ ] Audit logs are isolated from operational logs with append-only permissions and appropriate retention windows?
+- [ ] Log aggregation backends enforce explicit TTL retention policies per log stream?
+- [ ] Development and staging environments use synthetic data or anonymized extracts, never raw production database dumps?
