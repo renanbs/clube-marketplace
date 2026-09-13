@@ -201,6 +201,37 @@ def calculate_health_score(issues_count: int, penalty_per_issue: int = 20) -> in
     return max(0, 100 - (issues_count * penalty_per_issue))
 
 
+SEVERITY_WEIGHTS = {"CRITICAL": 30, "HIGH": 20, "MEDIUM": 10, "LOW": 4}
+
+
+def calculate_weighted_score(issues: List[Dict[str, Any]]) -> int:
+    """Severity-aware health score.
+
+    Two problems with the flat count-based score this replaces:
+
+    1. A LOW weighed the same as a HIGH, so severity carried no signal.
+    2. Line-level auditors saturated at zero after a handful of findings, so a file
+       with 4 blind logs scored the same as one with 40.
+
+    Repeated findings of the same *type* are usually one defect repeated, so each
+    additional instance of a type penalises less than the previous one. Distinct types
+    still accumulate at full weight.
+    """
+    if not issues:
+        return 100
+
+    seen: Dict[str, int] = {}
+    penalty = 0.0
+    for issue in issues:
+        severity = str(issue.get("severity", "MEDIUM")).upper()
+        kind = str(issue.get("type", severity))
+        occurrences = seen.get(kind, 0)
+        seen[kind] = occurrences + 1
+        penalty += SEVERITY_WEIGHTS.get(severity, 10) / (1 + occurrences)
+
+    return max(0, round(100 - penalty))
+
+
 def save_runlog(data: Dict[str, Any], output_file: str = ".clube/audit-last.json") -> str:
     """
     Persists structured audit execution results to JSON runlog.

@@ -132,14 +132,82 @@ def audit_acquisition_persistence(target_dir):
 
     return findings
 
+TRACKING_FILE_RE = re.compile(r'(tracking|analytics|attribution|pixel)', re.IGNORECASE)
+SPEC_FILE_RE = re.compile(r'\.(spec|test)\.[jt]sx?$', re.IGNORECASE)
+
+def audit_instrumentation_tests(target_dir):
+    """Tracking is the only part of the system that fails without any symptom.
+
+    When it breaks nothing errors, no screen breaks, no alert fires — the conversion
+    simply stops arriving (or arrives twice), and it surfaces weeks later while
+    reconciling revenue, after budget decisions were already made on the corrupted data.
+    """
+    findings = []
+    tracking_modules = []
+    spec_files = []
+
+    for root, dirs, files in os.walk(target_dir):
+        dirs[:] = [d for d in dirs if d not in IGNORED_DIRS]
+        for f in files:
+            if not f.endswith(('.ts', '.js', '.jsx', '.tsx')):
+                continue
+            path = os.path.join(root, f)
+            if SPEC_FILE_RE.search(f):
+                spec_files.append(path)
+            elif TRACKING_FILE_RE.search(f):
+                tracking_modules.append(path)
+
+    if not tracking_modules:
+        return findings
+
+    covered = any(TRACKING_FILE_RE.search(os.path.basename(spec)) for spec in spec_files)
+    if not covered:
+        findings.append({
+            "file": os.path.relpath(tracking_modules[0], target_dir),
+            "type": "Instrumentation Coverage",
+            "severity": "MEDIUM",
+            "description": "Tracking/attribution module found with no matching spec file. Instrumentation is the only subsystem that fails silently — cover at minimum: dedup fires once per transaction id, fires again for a different id, admin routes are excluded, the Pixel eventID equals the GA4 transaction_id, and tracking does not throw when fbq/gtag are undefined (adblocker)."
+        })
+    return findings
+
+def audit_ga_linker_timeout(target_dir):
+    """gtag('get', ..., callback) may never call back under an adblocker."""
+    findings = []
+    for root, dirs, files in os.walk(target_dir):
+        dirs[:] = [d for d in dirs if d not in IGNORED_DIRS]
+        for f in files:
+            if not f.endswith(('.ts', '.js', '.jsx', '.tsx', '.vue')):
+                continue
+            path = os.path.join(root, f)
+            try:
+                with open(path, 'r', encoding='utf-8', errors='ignore') as src:
+                    content = src.read()
+            except Exception:
+                continue
+
+            if "linker_param" not in content:
+                continue
+            if "setTimeout" in content or "Promise.race" in content or "AbortSignal.timeout" in content:
+                continue
+
+            findings.append({
+                "file": os.path.relpath(path, target_dir),
+                "type": "Cross-Domain Linker",
+                "severity": "HIGH",
+                "description": "GA4 linker decoration via gtag('get', ..., callback) without a timeout fail-safe. Under an adblocker or a flaky connection the callback may never fire, leaving the CTA hung. Race the callback against a short setTimeout that resolves with the undecorated URL — losing session continuity is acceptable, losing the click is not."
+            })
+    return findings
+
 def audit(target_dir):
     all_findings = []
     all_findings.extend(audit_cookie_domain(target_dir))
     all_findings.extend(audit_event_id_dedup(target_dir))
     all_findings.extend(audit_acquisition_persistence(target_dir))
+    all_findings.extend(audit_instrumentation_tests(target_dir))
+    all_findings.extend(audit_ga_linker_timeout(target_dir))
 
     issues_count = len(all_findings)
-    score = ui.calculate_health_score(issues_count, penalty_per_issue=25)
+    score = ui.calculate_weighted_score(all_findings)
     verdict = "PASS" if issues_count == 0 else "ACTION RECOMMENDED"
 
     return {
