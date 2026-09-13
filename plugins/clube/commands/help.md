@@ -18,7 +18,6 @@ The **Clube AI Marketplace** provides standardized AI workflows, stack-expert sk
 
 - `clube:init` — Guided onboarding and Project Profile setup.
 - `clube:fullstack-performance-resilience` — Runtime optimization (Node/Bun/Go/Python), deploy resilience, chunk recovery, and database query tuning.
-- `clube:building-data-apps` — Modern data applications, interactive dashboards, and reports (React, Streamlit, FastAPI).
 - `clube:saas-seo-geo` — Technical SEO and Generative Engine Optimization (GEO) for SaaS and landing pages.
 - `clube:marketing-attribution-analytics` — End-to-end tracking, attribution models, and marketing metric instrumentation.
 - `clube:data-privacy-observability` — PII/LGPD compliance in logs, APM, traces, telemetry, and error tracking.
