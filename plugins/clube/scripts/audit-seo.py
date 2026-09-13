@@ -168,7 +168,7 @@ def audit(target_dir):
     all_findings.extend(audit_html_metadata(target_dir))
 
     issues_count = len(all_findings)
-    score = ui.calculate_health_score(issues_count, penalty_per_issue=20)
+    score = ui.calculate_weighted_score(all_findings)
     verdict = "PASS" if issues_count == 0 else "OPTIMIZATIONS AVAILABLE"
 
     return {

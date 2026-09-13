@@ -27,6 +27,7 @@ def audit_chunk_recovery(target_dir):
     findings = []
     has_spa = False
     has_chunk_recovery = False
+    has_preload_listener = False
 
     for root, dirs, files in os.walk(target_dir):
         dirs[:] = [d for d in dirs if d not in IGNORED_DIRS]
@@ -50,6 +51,8 @@ def audit_chunk_recovery(target_dir):
                         content = src.read()
                         if "vite:preloadError" in content or "isLazyRouteChunkLoadError" in content or "CHUNK_RELOAD_KEY" in content:
                             has_chunk_recovery = True
+                        if "vite:preloadError" in content:
+                            has_preload_listener = True
                 except Exception:
                     pass
 
@@ -59,6 +62,55 @@ def audit_chunk_recovery(target_dir):
             "severity": "HIGH",
             "description": "Vite/SPA detected, but no chunk recovery listener found (missing 'vite:preloadError' or 'router.onError' chunk recovery). Users may experience 404 errors on new deployments."
         })
+    elif has_chunk_recovery and not has_preload_listener:
+        # router.onError only fires for lazy *route* navigation. An async child
+        # component (defineAsyncComponent / React.lazy) failing inside an already
+        # mounted view never reaches the router — a modal that refuses to open.
+        findings.append({
+            "type": "SPA Deploy Resilience",
+            "severity": "MEDIUM",
+            "description": "Chunk recovery is installed on the router but no 'vite:preloadError' listener was found. Router-level recovery misses async child components loaded inside an already mounted view, which fail silently after a deploy. Both capture points are required."
+        })
+    return findings
+
+# CREATE INDEX CONCURRENTLY is rejected by Postgres inside a transaction block, and most
+# migrators wrap every migration in one by default — so the migration fails even with
+# correct SQL unless the wrapper is explicitly disabled.
+CONCURRENTLY_RE = re.compile(r'CREATE\s+(?:UNIQUE\s+)?INDEX\s+CONCURRENTLY', re.IGNORECASE)
+NO_TRANSACTION_MARKERS = (
+    "+goose NO TRANSACTION",
+    "disable_ddl_transaction",
+    "atomic = False",
+    "atomic=False",
+    "x-no-transaction",
+    "transaction = false",
+)
+
+def audit_concurrent_index_migrations(target_dir):
+    findings = []
+    for root, dirs, files in os.walk(target_dir):
+        dirs[:] = [d for d in dirs if d not in IGNORED_DIRS]
+        for f in files:
+            if not f.endswith(('.sql', '.py', '.rb')):
+                continue
+            full_path = os.path.join(root, f)
+            try:
+                with open(full_path, 'r', encoding='utf-8', errors='ignore') as src:
+                    content = src.read()
+            except Exception:
+                continue
+
+            if not CONCURRENTLY_RE.search(content):
+                continue
+            if any(marker.lower() in content.lower() for marker in NO_TRANSACTION_MARKERS):
+                continue
+
+            findings.append({
+                "file": os.path.relpath(full_path, target_dir),
+                "type": "Migration Safety",
+                "severity": "HIGH",
+                "description": "Migration uses CREATE INDEX CONCURRENTLY without disabling the migrator's transaction wrapper. Postgres refuses the statement inside a transaction block, so this migration fails at apply time even though the SQL is correct. Add the directive for your migrator (goose: '-- +goose NO TRANSACTION'; Rails: 'disable_ddl_transaction!'; Django: 'atomic = False')."
+            })
     return findings
 
 # Edge/CDN configuration files, by provider. The pillar is provider-agnostic: what
@@ -170,9 +222,10 @@ def audit(target_dir):
     all_findings.extend(audit_chunk_recovery(target_dir))
     all_findings.extend(audit_cache_headers(target_dir))
     all_findings.extend(audit_backend_concurrency(target_dir))
+    all_findings.extend(audit_concurrent_index_migrations(target_dir))
 
     issues_count = len(all_findings)
-    score = ui.calculate_health_score(issues_count, penalty_per_issue=25)
+    score = ui.calculate_weighted_score(all_findings)
     verdict = "PASS" if issues_count == 0 else "ACTION REQUIRED"
 
     return {

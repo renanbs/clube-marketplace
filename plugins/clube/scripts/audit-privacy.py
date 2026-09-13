@@ -23,9 +23,12 @@ import ui  # noqa: E402
 
 BLIND_LOGGING_PATTERNS = [
     (r'console\.log\s*\(\s*(?:req\.body|payload|body|user|customer|account)\b', "JS/TS: Blind console.log of sensitive object"),
-    # %v is as blind as %+v and far more common; %#v too. The previous class [+v]
-    # matched "%+v" and "%vv" but never plain "%v".
-    (r'(?:log|fmt)\.(?:Printf|Sprintf|Errorf)\s*\(\s*[`"][^`"]*%[+#]?v', "Go: Blind struct serialization (%v/%+v/%#v) in log"),
+    # %v is as blind as %+v and far more common; %#v too (the previous class [+v]
+    # matched "%+v" and "%vv" but never plain "%v"). Scoped to a sensitive-looking
+    # argument, because `fmt.Errorf("bad alg: %v", header["alg"])` is idiomatic Go and
+    # flagging every %v drowns the real findings.
+    (r'\.(?:Printf|Print|Println|Sprintf|Infof|Debugf|Warnf|Errorf)\s*\(\s*[`"][^`"]*%[+#]?v[^`"]*[`"]\s*,\s*[^)]*\b(?:user|usr|payload|body|req|request|customer|account|entity|profile|claims)\b',
+     "Go: Blind struct serialization (%v/%+v/%#v) of a sensitive object"),
     (r'zap\.Any\s*\(\s*"(?:user|req|payload|body|account|customer)"', "Go: zap.Any blind struct serialization"),
     (r'logger\.(?:info|warn|error|debug)\s*\(\s*f?"[^"]*\{user\b', "Python: Direct user object interpolation in logger"),
     (r'(?:logger|log)\.(?:info|warning|warn|error|debug)\s*\(\s*[^)]*\.model_dump\s*\(', "Python: Pydantic model_dump() piped straight into a log"),
@@ -47,6 +50,17 @@ METRIC_PII_PATTERNS = [
 
 IGNORED_DIRS = {'.git', 'node_modules', 'dist', 'build', '.specs', 'vendor', '__pycache__', '.venv', 'venv', '.clube'}
 
+TEST_FILE_RE = re.compile(r'(?:\.(?:spec|test)\.[jt]sx?$|_test\.(?:go|py)$|^test_.*\.py$|Test\.java$|_spec\.rb$)')
+
+def is_ignored_dir(name):
+    """Directories skipped during the walk.
+
+    Includes '*-worktrees' / 'worktrees': git worktrees hold checkouts of the same
+    repository, so scanning them reports every finding once per branch and inflates
+    the count without adding information.
+    """
+    return name in IGNORED_DIRS or name == "worktrees" or name.endswith("-worktrees")
+
 def scan_file(file_path):
     issues = []
     try:
@@ -57,6 +71,10 @@ def scan_file(file_path):
     ext = Path(file_path).suffix.lower()
     fname = Path(file_path).name
     if fname.startswith("audit-") or ext not in {'.js', '.jsx', '.ts', '.tsx', '.go', '.py', '.vue', '.svelte', '.php', '.rb', '.java'}:
+        return issues
+    # Test files carry fake fixtures by design (a sample phone in an expected URL is not
+    # a leak). Auditing them reports the fixture, not the product's privacy posture.
+    if TEST_FILE_RE.search(fname):
         return issues
 
     for line_num, line in enumerate(lines, start=1):
@@ -92,13 +110,71 @@ def scan_file(file_path):
                 })
     return issues
 
+IMPERSONATION_RE = re.compile(r'impersonat', re.IGNORECASE)
+READONLY_GUARD_RE = re.compile(r'MethodGet|"GET"|\'GET\'|read[_-]?only|readOnly', re.IGNORECASE)
+AUDIT_LOG_RE = re.compile(r'impersonator|audit', re.IGNORECASE)
+
+def audit_impersonation(target_dir):
+    """Operator access to customer data must be read-only and fully audited.
+
+    Read-only keeps the account history trustworthy as evidence of what the customer
+    actually did; auditing every impersonated request — not only the denied ones — is
+    what answers "who on the team looked at this person's data?".
+    """
+    findings = []
+    impersonation_files = []
+    has_readonly_guard = False
+    has_audit_trail = False
+
+    for root, dirs, files in os.walk(target_dir):
+        dirs[:] = [d for d in dirs if not is_ignored_dir(d)]
+        for f in files:
+            if not (IMPERSONATION_RE.search(f) and f.endswith(('.go', '.py', '.ts', '.js', '.rb', '.java'))):
+                continue
+            path = os.path.join(root, f)
+            try:
+                with open(path, 'r', encoding='utf-8', errors='ignore') as src:
+                    content = src.read()
+            except Exception:
+                continue
+
+            impersonation_files.append(os.path.relpath(path, target_dir))
+            # Evaluated across the whole feature, not per file: the guard normally lives
+            # in a middleware while the handler that starts the session is a separate
+            # file, so a per-file check flags the handler for something it should not do.
+            if READONLY_GUARD_RE.search(content):
+                has_readonly_guard = True
+            if AUDIT_LOG_RE.search(content):
+                has_audit_trail = True
+
+    if not impersonation_files:
+        return findings
+
+    if not has_readonly_guard:
+        findings.append({
+            "file": impersonation_files[0],
+            "severity": "HIGH",
+            "type": "Impersonation Safety",
+            "description": "Impersonation logic found with no read-only guard anywhere in the feature. Writes performed while impersonating are attributed to the customer, which destroys the account history as evidence of what they actually did.",
+            "snippet": ""
+        })
+    if not has_audit_trail:
+        findings.append({
+            "file": impersonation_files[0],
+            "severity": "HIGH",
+            "type": "Impersonation Safety",
+            "description": "Impersonation logic found with no audit trail. Every impersonated request — not only denied ones — should record who acted, on whom, when and what.",
+            "snippet": ""
+        })
+    return findings
+
 def audit(target_dir):
     all_issues = []
     scanned_count = 0
     abs_target = os.path.abspath(target_dir)
 
     for root, dirs, files in os.walk(target_dir):
-        dirs[:] = [d for d in dirs if d not in IGNORED_DIRS]
+        dirs[:] = [d for d in dirs if not is_ignored_dir(d)]
         for file in files:
             full_path = os.path.join(root, file)
             issues = scan_file(full_path)
@@ -109,8 +185,10 @@ def audit(target_dir):
             all_issues.extend(issues)
             scanned_count += 1
 
+    all_issues.extend(audit_impersonation(target_dir))
+
     issues_count = len(all_issues)
-    score = ui.calculate_health_score(issues_count, penalty_per_issue=20)
+    score = ui.calculate_weighted_score(all_issues)
     verdict = "PASS" if issues_count == 0 else "ACTION REQUIRED"
 
     return {
