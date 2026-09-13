@@ -17,7 +17,6 @@ The **Clube AI Marketplace** provides standardized AI workflows, stack-expert sk
 ## Available Skills
 
 - `clube:init` — Guided onboarding and Project Profile setup.
-- `clube:clube-marketplace-architecture` — Architectural constitution and conventions.
 - `clube:fullstack-performance-resilience` — Runtime optimization (Node/Bun/Go/Python), deploy resilience, chunk recovery, and database query tuning.
 - `clube:building-data-apps` — Modern data applications, interactive dashboards, and reports (React, Streamlit, FastAPI).
 - `clube:saas-seo-geo` — Technical SEO and Generative Engine Optimization (GEO) for SaaS and landing pages.
