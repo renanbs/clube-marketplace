@@ -94,8 +94,23 @@ codex plugin install clube --source clube
 
 ---
 
+## Slash Commands
+
+| Slash Command | Focus |
+| :--- | :--- |
+| `/clube:audit` (or `/audit`) | Unified 360° SaaS production readiness audit across all 4 pillars. |
+| `/clube:audit-privacy` | Audits blind struct logging, PII in query strings, and metric cardinality. |
+| `/clube:audit-performance` | Audits SPA chunk recovery (404 prevention), CDN cache headers, and container limits. |
+| `/clube:audit-seo` | Audits `/llms.txt`, private route indexing protection, and Schema.org structured data. |
+| `/clube:audit-tracking` | Audits root domain cookies, Meta CAPI deduplication, and acquisition context. |
+| `/clube:init` | Guided project onboarding and `Project Profile` generation in `AGENTS.md` and `CLAUDE.md`. |
+| `/clube:help` | Lists available commands, skills, and core engineering principles. |
+
+---
+
 ## Operational Commands
 
 - `make check` — Audits active harness, marketplace catalogs, and plugin integrity.
+- `make audit` — Runs 360° production audit (privacy, performance, SEO/GEO, tracking) via fast deterministic static scripts.
 - `make sync` — Synchronizes harness pointer files (`@AGENTS.md`) across subdirectories.
 - `make init` — Runs project AI onboarding and harness configuration.

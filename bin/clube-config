@@ -25,6 +25,7 @@ cmd_help() {
     echo "Commands:"
     echo "  check          Audit active harness, marketplace catalogs, and plugin integrity"
     echo "  status         Alias for check"
+    echo "  audit [TYPE]   Run deterministic production audit (all, privacy, performance, seo, tracking)"
     echo "  sync [DIR]     Synchronize @AGENTS.md pointers for CLAUDE.md, GEMINI.md, .cursorrules"
     echo "  init [DIR]     Initialize project AI configuration and sync harness pointers"
     echo "  install        Install clube-config CLI into ~/.local/bin"
@@ -199,12 +200,44 @@ cmd_install() {
     echo -e "${GREEN}✅ Installed clube-config to $bin_dir/clube-config${NC}"
 }
 
+cmd_audit() {
+    local pillar="${1:-all}"
+    shift || true
+    local target="${1:-.}"
+
+    case "$pillar" in
+        all|360)
+            python3 "$REPO_ROOT/plugins/clube/scripts/audit-all.py" --target "$target"
+            ;;
+        privacy)
+            python3 "$REPO_ROOT/plugins/clube/scripts/audit-privacy.py" --target "$target"
+            ;;
+        performance)
+            python3 "$REPO_ROOT/plugins/clube/scripts/audit-performance.py" --target "$target"
+            ;;
+        seo|geo)
+            python3 "$REPO_ROOT/plugins/clube/scripts/audit-seo.py" --target "$target"
+            ;;
+        tracking|attribution)
+            python3 "$REPO_ROOT/plugins/clube/scripts/audit-tracking.py" --target "$target"
+            ;;
+        *)
+            echo -e "${RED}Unknown audit pillar: $pillar${NC}"
+            echo "Available pillars: all, privacy, performance, seo, tracking"
+            exit 1
+            ;;
+    esac
+}
+
 COMMAND="${1:-help}"
 shift || true
 
 case "$COMMAND" in
     init)
         cmd_init "$@"
+        ;;
+    audit)
+        cmd_audit "$@"
         ;;
     sync)
         cmd_sync "$@"
