@@ -75,7 +75,6 @@ codex plugin install clube --source clube
 | :--- | :--- |
 | `clube:init` | Guided project onboarding & `Project Profile` generation in `AGENTS.md` and `CLAUDE.md`. |
 | `clube:fullstack-performance-resilience` | Runtime optimization (Node/Bun/Go/Python), deploy resilience, chunk recovery, and database query tuning. |
-| `clube:building-data-apps` | Modern data apps, interactive dashboards, and reports (React, Streamlit, FastAPI). |
 | `clube:saas-seo-geo` | Technical SEO and Generative Engine Optimization (GEO) for SaaS and landing pages. |
 | `clube:marketing-attribution-analytics` | End-to-end tracking, attribution models, and marketing metric instrumentation. |
 | `clube:data-privacy-observability` | PII/LGPD compliance in logs, APM, traces, telemetry, and error tracking. |
