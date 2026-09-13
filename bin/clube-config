@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# clube-config — Unified AI Suite CLI for Clube Marketplace
+# clube-config — Unified AI Marketplace CLI for Clube
 # ==============================================================================
 set -euo pipefail
 
@@ -8,25 +8,25 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Source shared libraries
-if [ -f "$REPO_ROOT/base/shared/lib-harness.sh" ]; then
+if [ -f "$REPO_ROOT/scripts/lib-harness.sh" ]; then
     # shellcheck source=/dev/null
-    source "$REPO_ROOT/base/shared/lib-harness.sh"
+    source "$REPO_ROOT/scripts/lib-harness.sh"
 fi
-if [ -f "$REPO_ROOT/base/shared/lib-runlog.sh" ]; then
+if [ -f "$REPO_ROOT/scripts/lib-runlog.sh" ]; then
     # shellcheck source=/dev/null
-    source "$REPO_ROOT/base/shared/lib-runlog.sh"
+    source "$REPO_ROOT/scripts/lib-runlog.sh"
 fi
 
 cmd_help() {
-    echo -e "${BOLD}Clube Marketplace AI Suite CLI${NC}"
+    echo -e "${BOLD}Clube AI Marketplace CLI${NC}"
     echo ""
     echo -e "Usage: ${BOLD}clube-config <command> [options]${NC}"
     echo ""
     echo "Commands:"
-    echo "  init [DIR]     Initialize project AI configuration, audit formats, and sync harness pointers"
-    echo "  sync [DIR]     Synchronize @AGENTS.md pointers for CLAUDE.md, GEMINI.md, .cursorrules"
-    echo "  check          Audit active harness alignment, skills/agents formats, and AGENTS.md integrity"
+    echo "  check          Audit active harness, marketplace catalogs, and plugin integrity"
     echo "  status         Alias for check"
+    echo "  sync [DIR]     Synchronize @AGENTS.md pointers for CLAUDE.md, GEMINI.md, .cursorrules"
+    echo "  init [DIR]     Initialize project AI configuration and sync harness pointers"
     echo "  install        Install clube-config CLI into ~/.local/bin"
     echo "  help           Display this help message"
 }
@@ -38,7 +38,7 @@ cmd_check() {
 
     echo -e "${BOLD}### 1. Plan${NC}\n"
     echo -e "- **Command:** clube-config check"
-    echo -e "- **Action:** Audit AI host harness detection, skills/agents layout, and repository configuration"
+    echo -e "- **Action:** Audit AI host harness detection, marketplace catalogs, plugin manifests, and repository configuration"
     echo -e "- **Reversible:** read-only / not applicable\n"
 
     echo -e "${BOLD}### 2. Execution${NC}\n"
@@ -65,19 +65,74 @@ cmd_check() {
         fi
     done
 
-    # Check skills format
-    if [ -d "skills" ]; then
-        local non_standard_skills=()
-        for s in skills/*; do
-            if [ -f "$s" ] && [ "${s##*.}" = "md" ]; then
-                non_standard_skills+=("$s")
+    # Check root marketplace manifests
+    local market_manifests=(
+        ".claude-plugin/marketplace.json"
+        ".omp-plugin/marketplace.json"
+        ".cursor-plugin/marketplace.json"
+        ".agents/plugins/marketplace.json"
+    )
+    for m in "${market_manifests[@]}"; do
+        if [ -f "$REPO_ROOT/$m" ]; then
+            echo -e "  ✅ Marketplace catalog present: ${BOLD}$m${NC}"
+        else
+            echo -e "  ❌ Missing marketplace catalog: ${BOLD}$m${NC}"
+        fi
+    done
+
+    # Check plugins directory
+    if [ -d "$REPO_ROOT/plugins" ]; then
+        local plugin_count=0
+        for p in "$REPO_ROOT/plugins"/*; do
+            if [ -d "$p" ]; then
+                plugin_count=$((plugin_count + 1))
+                local pname
+                pname="$(basename "$p")"
+                echo -e "\n  [Plugin: ${BOLD}$pname${NC}]"
+
+                # Check harness manifests inside plugin
+                local pmanifests=(
+                    ".claude-plugin/plugin.json"
+                    ".cursor-plugin/plugin.json"
+                    ".codex-plugin/plugin.json"
+                    ".omp-plugin/plugin.json"
+                )
+                for pm in "${pmanifests[@]}"; do
+                    if [ -f "$p/$pm" ]; then
+                        echo -e "    ✅ Plugin manifest: $pm"
+                    else
+                        echo -e "    ⏭️ Optional plugin manifest omitted: $pm"
+                    fi
+                done
+
+                # Check skills directory
+                if [ -d "$p/skills" ]; then
+                    local valid_skills=0
+                    local invalid_skills=0
+                    for s in "$p/skills"/*; do
+                        if [ -d "$s" ] && [ -f "$s/SKILL.md" ]; then
+                            valid_skills=$((valid_skills + 1))
+                        elif [ -f "$s" ] && [ "${s##*.}" = "md" ]; then
+                            invalid_skills=$((invalid_skills + 1))
+                            echo -e "    ⚠️ Non-standard flat skill: $s (expected: skills/<name>/SKILL.md)"
+                        fi
+                    done
+                    echo -e "    ✅ Skills directory: $valid_skills valid modular skills"
+                fi
+
+                # Check commands directory
+                if [ -d "$p/commands" ]; then
+                    local cmd_count
+                    cmd_count=$(find "$p/commands" -maxdepth 1 -name "*.md" | wc -l)
+                    echo -e "    ✅ Commands directory: $cmd_count slash commands"
+                fi
             fi
         done
-        if [ ${#non_standard_skills[@]} -gt 0 ]; then
-            echo -e "  ⚠️ Non-standard flat skills detected: ${non_standard_skills[*]} (expected: skills/<name>/SKILL.md)"
-        else
-            echo -e "  ✅ Skills directory structure is compliant"
+        if [ "$plugin_count" -eq 0 ]; then
+            echo -e "  ⚠️ No plugins found in plugins/ directory"
         fi
+    else
+        echo -e "  ❌ Missing plugins/ directory"
     fi
 
     echo -e "\n${BOLD}### 3. Summary${NC}\n"
@@ -87,6 +142,7 @@ cmd_check() {
     echo -e "| Active Harness | $(get_harness_friendly_name "$active") |"
     echo -e "| AGENTS.md Present | $([ -f "AGENTS.md" ] && echo "yes" || echo "no") |"
     echo -e "| Source of Truth | AGENTS.md |"
+    echo -e "| Plugins Directory | plugins/ (modular marketplace structure) |"
 }
 
 cmd_sync() {
@@ -112,44 +168,8 @@ cmd_init() {
     echo -e "${BOLD}=== CLUBE PROJECT AI ONBOARDING ===${NC}"
     echo -e "Target directory: ${BOLD}$target${NC}\n"
 
-    # Check for existing instruction files and non-standard formats
-    local existing_legacy=()
-    for f in "$target/CLAUDE.md" "$target/GEMINI.md" "$target/.cursorrules" "$target/.cursor/rules"*; do
-        if [ -e "$f" ]; then
-            if [ -f "$f" ]; then
-                local content
-                content="$(cat "$f" 2>/dev/null || echo '')"
-                if [ "$content" != "@AGENTS.md" ]; then
-                    existing_legacy+=("$f")
-                fi
-            elif [ -d "$f" ]; then
-                existing_legacy+=("$f")
-            fi
-        fi
-    done
-
-    # Check for flat/non-standard skills
-    if [ -d "$target/skills" ]; then
-        for s in "$target"/skills/*; do
-            if [ -f "$s" ] && [ "${s##*.}" = "md" ]; then
-                existing_legacy+=("$s")
-            fi
-        done
-    fi
-
-    if [ ${#existing_legacy[@]} -gt 0 ]; then
-        echo -e "${YELLOW}Non-standard formats / custom instruction files detected:${NC}"
-        for item in "${existing_legacy[@]}"; do
-            echo -e "  • $item"
-        done
-        echo ""
-        echo -e "${BOLD}Options available:${NC}"
-        echo -e "  [1] Move to standard format (migrate instructions to AGENTS.md, skills to skills/<name>/SKILL.md)"
-        echo -e "  [2] Leave as is (preserve existing files without modifying)"
-    fi
-
     if [ ! -f "$target/AGENTS.md" ]; then
-        echo -e "\nCreating base ${BOLD}AGENTS.md${NC} template..."
+        echo -e "Creating base ${BOLD}AGENTS.md${NC} template..."
         cat << 'EOF' > "$target/AGENTS.md"
 # Project AI Instructions
 

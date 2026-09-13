@@ -1,0 +1,35 @@
+{
+  "name": "clube",
+  "version": "1.0.0",
+  "description": "Clube AI engineering workflow, stack-expert skills, and guided init for Clube projects.",
+  "author": {
+    "name": "Clube",
+    "email": "contato@clube.com.br",
+    "url": "https://github.com/clube/clube-marketplace"
+  },
+  "homepage": "https://github.com/clube/clube-marketplace",
+  "repository": "https://github.com/clube/clube-marketplace",
+  "license": "MIT",
+  "keywords": [
+    "clube",
+    "marketplace",
+    "workflow",
+    "skills",
+    "agents"
+  ],
+  "skills": "./skills/",
+  "commands": "./commands/",
+  "agents": "./agents/",
+  "interface": {
+    "displayName": "Clube",
+    "shortDescription": "Clube engineering workflow and stack-expert skills",
+    "longDescription": "Orchestrates Clube engineering workflow, AGENTS.md single source of truth, and stack-expert skills.",
+    "developerName": "Clube",
+    "category": "Developer Tools",
+    "websiteURL": "https://github.com/clube/clube-marketplace",
+    "defaultPrompt": [
+      "Initialize this project with clube:init",
+      "Check configuration status with clube:check-status"
+    ]
+  }
+}

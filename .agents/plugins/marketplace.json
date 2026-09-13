@@ -1,0 +1,20 @@
+{
+  "name": "clube",
+  "interface": {
+    "displayName": "Clube"
+  },
+  "plugins": [
+    {
+      "name": "clube",
+      "source": {
+        "source": "local",
+        "path": "./plugins/clube"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}
