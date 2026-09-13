@@ -1,0 +1,22 @@
+{
+  "name": "clube",
+  "version": "1.0.0",
+  "description": "Clube AI engineering workflow, stack-expert skills, and guided init for Clube projects.",
+  "author": {
+    "name": "Clube",
+    "email": "contato@clube.com.br"
+  },
+  "homepage": "https://github.com/clube/clube-marketplace",
+  "repository": "https://github.com/clube/clube-marketplace",
+  "license": "MIT",
+  "keywords": [
+    "clube",
+    "marketplace",
+    "workflow",
+    "skills",
+    "agents"
+  ],
+  "skills": "./skills/",
+  "commands": "./commands/",
+  "agents": "./agents/"
+}
