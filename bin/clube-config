@@ -32,10 +32,26 @@ cmd_help() {
     echo "  help           Display this help message"
 }
 
+# Counts problems found during `check`. A gate that always exits 0 reports "compliant"
+# in every state, which makes the quality claim unfalsifiable — so every failure path
+# below must call check_fail.
+CHECK_FAILURES=0
+
+check_fail() {
+    CHECK_FAILURES=$((CHECK_FAILURES + 1))
+}
+
+# Skills that legitimately have no references/ subdirectory. Everything else under
+# skills/ is expected to be a decomposed vertical skill. Stated as an exemption list
+# rather than an allowlist of vertical skills, so a newly added vertical skill is
+# covered by default instead of silently escaping the check.
+SKILLS_WITHOUT_REFERENCES=("init" "clube-architecture")
+
 cmd_check() {
     local active saved
     active="$(detect_active_harness)"
     saved="$(get_saved_harness)"
+    CHECK_FAILURES=0
 
     echo -e "${BOLD}### 1. Plan${NC}\n"
     echo -e "- **Command:** clube-config check"
@@ -78,6 +94,7 @@ cmd_check() {
             echo -e "  ✅ Marketplace catalog present: ${BOLD}$m${NC}"
         else
             echo -e "  ❌ Missing marketplace catalog: ${BOLD}$m${NC}"
+            check_fail
         fi
     done
 
@@ -116,23 +133,54 @@ cmd_check() {
                             valid_skills=$((valid_skills + 1))
                             local sname
                             sname="$(basename "$s")"
+                            local exempt=0
+                            for e in "${SKILLS_WITHOUT_REFERENCES[@]}"; do
+                                [ "$sname" = "$e" ] && exempt=1
+                            done
+
                             if [ -d "$s/references" ]; then
                                 local refs
                                 refs=$(find "$s/references" -maxdepth 1 -name "*.md" | wc -l)
                                 total_refs=$((total_refs + refs))
-                            else
-                                case "$sname" in
-                                    saas-seo-geo|marketing-attribution-analytics|fullstack-performance-resilience|data-privacy-observability)
-                                        echo -e "    ⚠️ Missing references/ directory in vertical SaaS skill: $s"
-                                        ;;
-                                esac
+
+                                # Progressive disclosure only works while the links resolve.
+                                # A broken link makes the deep guide unreachable without any
+                                # error: the entrypoint promises knowledge that never loads.
+                                local link target
+                                while IFS= read -r link; do
+                                    [ -n "$link" ] || continue
+                                    target="$s/$link"
+                                    if [ ! -f "$target" ]; then
+                                        echo -e "    ❌ Broken reference link in $sname/SKILL.md: $link"
+                                        invalid_skills=$((invalid_skills + 1))
+                                        check_fail
+                                    fi
+                                done < <(grep -oE '\(references/[^)]+\.md\)' "$s/SKILL.md" 2>/dev/null | tr -d '()' | sort -u)
+
+                                # An unreferenced guide is dead weight the entrypoint never routes to.
+                                local ref orphan_name
+                                while IFS= read -r ref; do
+                                    [ -n "$ref" ] || continue
+                                    orphan_name="$(basename "$ref")"
+                                    if ! grep -q "$orphan_name" "$s/SKILL.md" 2>/dev/null; then
+                                        echo -e "    ⚠️ Orphaned reference (not linked from SKILL.md): $sname/references/$orphan_name"
+                                        check_fail
+                                    fi
+                                done < <(find "$s/references" -maxdepth 1 -name "*.md")
+                            elif [ "$exempt" -eq 0 ]; then
+                                echo -e "    ❌ Missing references/ directory in vertical skill: $sname"
+                                invalid_skills=$((invalid_skills + 1))
+                                check_fail
                             fi
                         elif [ -f "$s" ] && [ "${s##*.}" = "md" ]; then
                             invalid_skills=$((invalid_skills + 1))
+                            check_fail
                             echo -e "    ⚠️ Non-standard flat skill: $s (expected: skills/<name>/SKILL.md)"
                         fi
                     done
-                    if [ "$total_refs" -gt 0 ]; then
+                    if [ "$invalid_skills" -gt 0 ]; then
+                        echo -e "    ❌ Skills directory: $invalid_skills problem(s) across $valid_skills skills"
+                    elif [ "$total_refs" -gt 0 ]; then
                         echo -e "    ✅ Skills directory: $valid_skills valid modular skills ($total_refs topic references)"
                     else
                         echo -e "    ✅ Skills directory: $valid_skills valid modular skills"
@@ -145,20 +193,39 @@ cmd_check() {
                     local invalid_agents=0
                     for a in "$p/agents"/*.md; do
                         [ -e "$a" ] || continue
-                        local has_name has_desc has_tools has_model has_ro
-                        has_name=$(grep -E "^name:" "$a" || true)
-                        has_desc=$(grep -E "^description:" "$a" || true)
-                        has_tools=$(grep -E "^tools:" "$a" || true)
-                        has_model=$(grep -E "^model:" "$a" || true)
-                        has_ro=$(grep -E "^readonly:" "$a" || true)
-                        if [ -n "$has_name" ] && [ -n "$has_desc" ] && [ -n "$has_tools" ] && [ -n "$has_model" ] && [ -n "$has_ro" ]; then
+                        local aname frontmatter missing field
+                        aname="$(basename "$a")"
+
+                        # Read only the frontmatter block. Grepping the whole file lets a
+                        # body line that happens to start with "name:" satisfy the check,
+                        # and says nothing about the --- delimiters being present at all.
+                        frontmatter="$(awk 'NR==1 && $0!="---" {exit} NR==1 {next} /^---[[:space:]]*$/ {exit} {print}' "$a")"
+
+                        if [ -z "$frontmatter" ]; then
+                            invalid_agents=$((invalid_agents + 1))
+                            check_fail
+                            echo -e "    ❌ Agent has no YAML frontmatter block: $aname"
+                            continue
+                        fi
+
+                        missing=""
+                        for field in name description tools model readonly; do
+                            grep -qE "^${field}:" <<< "$frontmatter" || missing="$missing $field"
+                        done
+
+                        if [ -z "$missing" ]; then
                             valid_agents=$((valid_agents + 1))
                         else
                             invalid_agents=$((invalid_agents + 1))
-                            echo -e "    ⚠️ Invalid agent frontmatter: $a"
+                            check_fail
+                            echo -e "    ❌ Agent frontmatter missing field(s) in $aname:$missing"
                         fi
                     done
-                    echo -e "    ✅ Agents directory: $valid_agents valid specialist agents"
+                    if [ "$invalid_agents" -gt 0 ]; then
+                        echo -e "    ❌ Agents directory: $invalid_agents invalid, $valid_agents valid specialist agents"
+                    else
+                        echo -e "    ✅ Agents directory: $valid_agents valid specialist agents"
+                    fi
                 fi
 
                 # Check commands directory
@@ -171,9 +238,11 @@ cmd_check() {
         done
         if [ "$plugin_count" -eq 0 ]; then
             echo -e "  ⚠️ No plugins found in plugins/ directory"
+            check_fail
         fi
     else
         echo -e "  ❌ Missing plugins/ directory"
+        check_fail
     fi
 
     # SemVer Parity Check across all 9 manifests
@@ -240,19 +309,28 @@ PYEOF
             semver_status="v${semver_target} (all manifests aligned)"
         else
             echo -e "\n  ❌ SemVer parity mismatch: ${semver_output#ERR:}"
+            check_fail
             semver_status="mismatch (${semver_output#ERR:})"
         fi
+    fi
+
+    local status_label="passed (0 problems)"
+    if [ "$CHECK_FAILURES" -gt 0 ]; then
+        status_label="FAILED (${CHECK_FAILURES} problem(s))"
     fi
 
     echo -e "\n${BOLD}### 3. Summary${NC}\n"
     echo -e "| Field | Content |"
     echo -e "| :--- | :--- |"
-    echo -e "| Status | check completed |"
+    echo -e "| Status | ${status_label} |"
     echo -e "| Active Harness | $(get_harness_friendly_name "$active") |"
     echo -e "| SemVer Parity | ${semver_status} |"
     echo -e "| AGENTS.md Present | $([ -f "AGENTS.md" ] && echo "yes" || echo "no") |"
     echo -e "| Source of Truth | AGENTS.md |"
     echo -e "| Plugins Directory | plugins/ (modular marketplace structure) |"
+
+    # Non-zero exit is what makes this usable as a CI gate.
+    [ "$CHECK_FAILURES" -eq 0 ]
 }
 
 cmd_sync() {
