@@ -214,3 +214,43 @@ def test_parse_frontmatter_returns_none_without_delimiters(tmp_path):
 def test_referenced_links_are_deduplicated(tmp_path):
     text = "[a](references/g.md) and again [a](references/g.md) plus [b](references/h.md)"
     assert check.referenced_links(text) == ["references/g.md", "references/h.md"]
+
+
+# --------------------------------------------------------------------------- #
+# Version drift
+# --------------------------------------------------------------------------- #
+
+def test_package_version_is_the_only_source_of_truth():
+    """A hardcoded __version__ is one more declaration to keep in sync, and one the
+    parity check does not cover — so it drifts silently. It must be derived."""
+    import json as _json
+
+    import clube_cli
+
+    declared = _json.loads(
+        (cli_repo_root() / "package.json").read_text(encoding="utf-8")
+    )["version"]
+    assert clube_cli.__version__ == declared
+
+
+def test_no_hardcoded_version_literal_in_the_package():
+    """Guards the fix above: catches someone re-introducing a literal."""
+    import re
+
+    for path in (cli_repo_root() / "clube_cli").glob("*.py"):
+        text = path.read_text(encoding="utf-8")
+        assert not re.search(r'__version__\s*=\s*["\']\d+\.\d+\.\d+["\']', text), path
+
+
+def test_real_repository_semver_parity_holds():
+    """The repository itself must pass its own parity check."""
+    target, matched, total, problems = check.check_semver_parity(cli_repo_root())
+    assert problems == []
+    assert matched == total
+    assert target
+
+
+def cli_repo_root():
+    from pathlib import Path
+
+    return Path(__file__).resolve().parent.parent
