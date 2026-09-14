@@ -22,6 +22,7 @@
   },
   "scripts": {
     "check": "./bin/clube-config check",
-    "sync": "./scripts/sync-harness-configs.sh"
+    "sync": "./bin/clube-config sync",
+    "test": "./bin/clube-config test"
   }
 }

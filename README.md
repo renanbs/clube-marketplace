@@ -40,11 +40,14 @@ clube-marketplace/
 ├── GEMINI.md                           # Pointer -> @AGENTS.md
 ├── .cursorrules                        # Pointer -> @AGENTS.md
 ├── bin/
-│   └── clube-config                    # Unified CLI tool & harness integrity checker
-├── scripts/
-│   ├── lib-harness.sh                  # Host harness detection engine
-│   ├── lib-runlog.sh                   # Structured event logging utilities
-│   └── sync-harness-configs.sh         # Pointer synchronizer (@AGENTS.md)
+│   └── clube-config                    # Thin launcher for the Python CLI
+├── clube_cli/                          # CLI implementation (unit tested)
+│   ├── cli.py                          # Command dispatch
+│   ├── check.py                        # Repository integrity validator
+│   ├── harness.py                      # Host harness detection engine
+│   ├── runlog.py                       # Structured event logging utilities
+│   └── sync.py                         # Pointer synchronizer (@AGENTS.md)
+├── tests/                              # pytest suite (run with `make test`)
 ├── .clube/
 │   └── audit-last.json                 # Structured audit runlog & persistent state
 └── plugins/
