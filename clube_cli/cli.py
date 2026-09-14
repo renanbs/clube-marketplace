@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 
 from . import check as check_mod
-from . import harness, runlog, sync
+from . import deps, harness, runlog, sync
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -50,6 +50,7 @@ def cmd_help(_args=None):
     print("  audit [TYPE]   Run deterministic production audit (all, privacy, performance, seo, tracking)")
     print("  sync [DIR]     Synchronize @AGENTS.md pointers for CLAUDE.md, GEMINI.md, .cursorrules")
     print("  init [DIR]     Initialize project AI configuration and sync harness pointers")
+    print("  doctor         Verify required and optional toolchain dependencies")
     print("  install        Install clube-config CLI into ~/.local/bin")
     print("  test           Run the Python test suite")
     print("  help           Display this help message")
@@ -180,11 +181,62 @@ def cmd_sync(args):
     return 0
 
 
+def _report_dependencies(results):
+    """Print the preflight table. Returns the number of blocking problems."""
+    for result in results:
+        dependency = result.dependency
+        if result.ok:
+            print(f"  ✅ {dependency.name}: {result.detail}")
+        elif dependency.required:
+            print(f"  ❌ {dependency.name}: {result.detail}")
+            print(f"     {dependency.purpose}")
+            print(f"     Install: {dependency.install_hint}")
+        else:
+            print(f"  ⚠️ {dependency.name}: {result.detail} (optional)")
+            print(f"     {dependency.purpose}")
+            print(f"     Install: {dependency.install_hint}")
+    return len(deps.blocking(results))
+
+
+def cmd_doctor(_args=None):
+    """Verify the toolchain without touching any files."""
+    print(f"{BOLD}### 1. Plan{NC}\n")
+    print("- **Command:** clube-config doctor")
+    print("- **Action:** Verify required and optional toolchain dependencies")
+    print("- **Reversible:** read-only / not applicable\n")
+
+    print(f"{BOLD}### 2. Execution{NC}\n")
+    results = deps.check_all()
+    blocking = _report_dependencies(results)
+    optional_missing = len(deps.missing_optional(results))
+
+    status = "passed" if blocking == 0 else f"FAILED ({blocking} required missing)"
+    print(f"\n{BOLD}### 3. Summary{NC}\n")
+    _table([
+        ("Status", status),
+        ("Required Missing", str(blocking)),
+        ("Optional Missing", str(optional_missing)),
+        ("Interpreter", sys.executable),
+    ])
+    return 0 if blocking == 0 else 1
+
+
 def cmd_init(args):
     target = args[0] if args else "."
     print(f"{BOLD}=== CLUBE PROJECT AI ONBOARDING ==={NC}")
     print(f"Target directory: {BOLD}{target}{NC}\n")
 
+    # Preflight before writing anything: a missing dependency discovered here is far
+    # cheaper than one that surfaces as a cryptic failure three commands later.
+    print(f"{BOLD}Checking toolchain...{NC}")
+    results = deps.check_all()
+    if _report_dependencies(results) > 0:
+        print(f"\n{RED}Onboarding aborted: install the required dependencies above and re-run.{NC}",
+              file=sys.stderr)
+        runlog.log_event("error", "init", "blocked by missing required dependencies")
+        return 1
+
+    print()
     if sync.ensure_agents_md(target):
         print(f"  ✅ Created {target}/AGENTS.md")
     else:
@@ -238,6 +290,7 @@ COMMANDS = {
     "audit": cmd_audit,
     "sync": cmd_sync,
     "init": cmd_init,
+    "doctor": cmd_doctor,
     "install": cmd_install,
     "test": cmd_test,
     "help": cmd_help,

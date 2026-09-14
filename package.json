@@ -23,6 +23,7 @@
   "scripts": {
     "check": "./bin/clube-config check",
     "sync": "./bin/clube-config sync",
-    "test": "./bin/clube-config test"
+    "test": "./bin/clube-config test",
+    "doctor": "./bin/clube-config doctor"
   }
 }
