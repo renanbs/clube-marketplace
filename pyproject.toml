@@ -1,0 +1,14 @@
+[project]
+name = "clube-marketplace-audit"
+version = "0.1.0"
+description = "Test harness for the deterministic Clube audit scripts"
+requires-python = ">=3.10"
+dependencies = []
+
+[dependency-groups]
+dev = ["pytest>=8.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# -q keeps the gate output readable next to `make check` / `make audit`.
+addopts = "-q --strict-markers"

@@ -40,11 +40,14 @@ clube-marketplace/
 ├── GEMINI.md                           # Ponteiro -> @AGENTS.md
 ├── .cursorrules                        # Ponteiro -> @AGENTS.md
 ├── bin/
-│   └── clube-config                    # Utilitário CLI e verificador de integridade
-├── scripts/
-│   ├── lib-harness.sh                  # Mecanismo de detecção do host ativo
-│   ├── lib-runlog.sh                   # Utilitários para registro estruturado de eventos
-│   └── sync-harness-configs.sh         # Sincronizador de ponteiros (@AGENTS.md)
+│   └── clube-config                    # Lançador enxuto para a CLI em Python
+├── clube_cli/                          # Implementação da CLI (coberta por testes)
+│   ├── cli.py                          # Despacho de comandos
+│   ├── check.py                        # Validador de integridade do repositório
+│   ├── harness.py                      # Mecanismo de detecção do host ativo
+│   ├── runlog.py                       # Utilitários para registro estruturado de eventos
+│   └── sync.py                         # Sincronizador de ponteiros (@AGENTS.md)
+├── tests/                              # Suíte pytest (rode com `make test`)
 ├── .clube/
 │   └── audit-last.json                 # Runlog estruturado de auditoria e estado persistente
 └── plugins/

@@ -6,7 +6,7 @@ description: |
   Activate this skill whenever configuring metadata, structured data, GEO (llms.txt), or crawler indexing.
 license: Apache-2.0
 metadata:
-  version: v0.2.0
+  version: v0.3.0
   author: clubedepontos
 ---
 

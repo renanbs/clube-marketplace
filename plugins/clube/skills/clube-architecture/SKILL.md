@@ -14,6 +14,7 @@ flowchart TD
     A --> D[Pillar 3: 4-Phase Output Contract]
     A --> E[Pillar 4: Structured State Logging]
     A --> F[Pillar 5: SemVer & Bilingual Docs]
+    C --> G[2.3: Gates Must Be Able To Fail]
 ```
 
 ---
@@ -137,9 +138,19 @@ sequenceDiagram
 | **Advisor (LLM)** | `plugins/clube/commands/*.md` | Generative reasoning via active model | Evaluates context, eliminates false positives, recommends architecture changes, and generates complete code diffs. |
 
 ### 2.2 Detector Implementation Standards
-- **Pure Python 3 Standard Library:** Scripts in `plugins/clube/scripts/` must **never** require external `pip` dependencies. They must execute immediately on any standard Linux/macOS/Windows developer workstation.
+- **Pure Python 3 Standard Library at runtime:** Scripts in `plugins/clube/scripts/` and the CLI in `clube_cli/` must **never** require external `pip` dependencies to run. They execute immediately on any standard Linux/macOS/Windows developer workstation. Test-only dependencies (`pytest`) live in the `dev` dependency group and never ship or load at runtime.
 - **Strict Read-Only Execution:** Audit scripts never modify files, touch network endpoints, or execute untrusted code.
 - **Dual Output Contract:** Detector scripts support both rich ANSI terminal output for humans and machine-readable `--json` output for automated tooling.
+- **Python, not shell.** Command and detector logic is written in Python so it can be unit tested. Shell is limited to a launcher that resolves paths and hands over. Untestable branching in shell is how silent defects survive — a counter incremented and never read, a `grep` over a whole file standing in for parsing a delimited block, an error swallowed by `|| true`.
+
+### 2.3 Gates Must Be Able To Fail
+A gate that always exits `0` reports "compliant" in every possible state, which makes the claim unfalsifiable and the gate decorative.
+
+- Every check returns structured problems to its caller; the caller counts them and **derives the exit code from that count**.
+- A warning printed next to an unconditional success line is not a finding — if a condition is worth printing, it is worth failing on or worth removing.
+- Every detector and validator ships with unit tests under `tests/`, run by `make test`. Two categories are mandatory:
+  - **True positives** — the defect the check exists to catch.
+  - **Calibrated false positives** — idiomatic code that must stay quiet. A detector that flags ordinary code gets muted by its users and then protects nothing, so each known-benign pattern is pinned by a test.
 
 ---
 
@@ -285,6 +296,24 @@ flowchart TD
 - All release tags adhere strictly to Semantic Versioning (`vMAJOR.MINOR.PATCH`).
 - Version numbers must be bumped synchronously across **all** harness manifests and `package.json`. No manifest may drift ahead or lag behind.
 
+#### Single Source of Truth
+`package.json` holds the canonical version. Every other declaration must either be verified against it by `make check` or be **derived from it at runtime** — never both duplicated and unverified.
+
+| Location | Count | How it stays correct |
+| :--- | :--- | :--- |
+| `package.json` | 1 | Canonical — the value everything else is compared to |
+| Harness marketplace catalogs & plugin manifests | 8 | Compared against the canonical value by `make check` |
+| Vertical skill frontmatter (`metadata.version`) | 1 per skill | Bumped with the release |
+| Python package (`clube_cli.__version__`) | 1 | Read from `package.json` at import time |
+
+- **Never hardcode a version literal in code.** A literal is one more declaration to keep in sync *and* one the parity check does not cover, so it drifts silently — which is the exact failure Pillar 5 exists to prevent. Derive it instead.
+- **Never hardcode the target version inside the validator.** It reads the canonical value from `package.json`, so cutting a release never requires editing the tool that verifies releases.
+
+#### When to bump
+- **PATCH** — bug fix with no change to structure or public commands.
+- **MINOR** — new skill, agent, command, or detector check; and (pre-1.0) any removal or relocation of a public entrypoint, such as replacing a shipped script with another implementation.
+- **MAJOR** — reserved for post-1.0 breaking changes to the plugin contract.
+
 ### 5.2 Bilingual Documentation Policy
 - **English as Canonical Source:** All skills (`SKILL.md`), command definitions (`commands/*.md`), agent prompts (`agents/*.md`), code comments, and primary documentation (`README.md`, `CHANGELOG.md`) are authored in clear, technical, idiomatic English.
 - **Brazilian Portuguese Synchronization:** Comprehensive developer documentation is mirrored in Brazilian Portuguese (`README.pt-BR.md`, `CHANGELOG.pt-BR.md`). When adding or altering features, documentation updates in both languages are mandatory before merge.
@@ -303,3 +332,8 @@ flowchart TD
 | **Parsing terminal ANSI stdout in LLMs** | Violates Pillar 4 | Read `.clube/audit-last.json` for deterministic structured facts. |
 | **English-only or Portuguese-only PRs** | Violates Pillar 5 | Keep `README.md` and `README.pt-BR.md` in strict parity. |
 | **Manifest version drift across harnesses** | Violates Pillar 5 | Verify version alignment across all harness `plugin.json` files with `make check`. |
+| **Hardcoded version literal in code** | Violates Pillar 5 (5.1) | Derive it from `package.json`; a literal is unverified by `make check` and drifts silently. |
+| **Hardcoded target version inside the validator** | Violates Pillar 5 (5.1) | Read the canonical value from `package.json` so releasing never edits the release checker. |
+| **Command logic written in shell** | Violates Pillar 2 (2.2) | Keep logic in Python under `clube_cli/`; shell is a launcher only. |
+| **Gate that prints a warning and still exits 0** | Violates Pillar 2 (2.3) | Derive the exit code from the problem count; drop the check or make it fail. |
+| **Detector shipped without tests** | Violates Pillar 2 (2.3) | Add true-positive *and* calibrated false-positive tests under `tests/`. |
