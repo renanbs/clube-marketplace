@@ -46,9 +46,62 @@ flowchart LR
 
 ### 1.1 Architectural Rules
 - **Single Source of Truth:** `AGENTS.md` is the authoritative instructions file for all AI harnesses. Root configuration files (`CLAUDE.md`, `GEMINI.md`, `.cursorrules`) must reference `@AGENTS.md` rather than duplicating instructions.
-- **Canonical Plugin Isolation:** All business logic, skills, slash commands, and scripts reside under `plugins/<plugin_name>/` (e.g., `plugins/clube/`).
+- **Canonical Plugin Isolation:** All business logic, skills, slash commands, agents, and scripts reside under `plugins/<plugin_name>/` (e.g., `plugins/clube/`).
 - **Zero-Duplication Rule:** Harness root catalogs (`.claude-plugin/`, `.omp-plugin/`, `.cursor-plugin/`, `.codex-plugin/`) point directly to `plugins/clube/` manifests or symlinks. Physical copies of Markdown commands or skills across harness folders are strictly prohibited.
-- **Catalog Verification:** Running `make check` validates all harness catalog pointers, manifest schemas, and plugin integrity across the workspace.
+- **Catalog Verification:** Running `make check` or `./bin/clube-config check` validates all harness catalog pointers, manifest schemas, agent definitions, skill references, and plugin integrity across the workspace.
+
+### 1.2 Named Specialist Agents Standard (`plugins/<plugin>/agents/`)
+
+Clube adopts a **Named Specialist Agent Pattern** to delegate deep domain implementations to dedicated subagents while preventing context pollution.
+
+#### Multi-Harness Frontmatter Contract
+Every agent file under `plugins/<plugin>/agents/<name>.md` must define a strict YAML frontmatter header:
+
+```yaml
+---
+name: expert-seo
+description: Specialist agent in technical SEO, Generative Engine Optimization (GEO), Schema.org JSON-LD, /llms.txt discovery, OpenGraph tags, and indexing boundaries.
+tools: Read, Write, Edit, Grep, Glob, Bash
+model: inherit
+readonly: false
+---
+```
+
+#### Abstract Capability Classes
+- **Zero Vendor Model Hardcoding:** Agent definitions must **never** hardcode specific vendor model identifiers (e.g., `claude-3-7-sonnet`, `gpt-4o`, `gemini-1.5-pro`).
+- **Abstract Capability Tiers:** Agents declare abstract capability classes (`reasoning`, `code`, `critique`):
+  - `reasoning`: High-reasoning model class for architectural planning, audits, complex synthesis, and root-cause analysis.
+  - `code`: High-speed, high-precision model class for code edits, refactorings, and test generation.
+  - `critique`: Read-only evaluation model class for code reviews and QA gates.
+- The active host harness maps these abstract classes to physical models via `Project Profile` in `AGENTS.md` or harness config overrides (e.g., `/clube:omp-setup`).
+
+#### Tool Scoping & Readonly Invariants
+- Read-only coordinator agents (e.g., `clube-auditor`) declare `readonly: true` and omit modifying tools (`Write`, `Edit`).
+- Implementation agents declare `readonly: false` and explicitly specify allowed toolsets.
+
+### 1.3 Progressive Disclosure Skill Architecture (`references/`)
+
+To maintain maximum token efficiency and fast context loading, skills follow the **Progressive Disclosure Principle**:
+
+```mermaid
+flowchart TD
+    subgraph Entrypoint["Lean Skill Entrypoint (<100 lines)"]
+        S["SKILL.md<br/>• Name & Description<br/>• Activation Triggers<br/>• References Routing Index"]
+    end
+    
+    subgraph DeepGuides["references/ Subdirectory"]
+        R1["references/topic-1.md (Deep DDLs & Schemas)"]
+        R2["references/topic-2.md (Multi-Framework Code)"]
+        R3["references/topic-3.md (Edge & Server Rules)"]
+    end
+    
+    S -->|On-demand navigation| R1
+    S -->|On-demand navigation| R2
+    S -->|On-demand navigation| R3
+```
+
+1. **Lean Entrypoint (`SKILL.md`):** Limited to `<100 lines`. Acts purely as an activation router containing domain triggers, behavioral rules, and a clear topic guide index.
+2. **Modular References (`references/*.md`):** Deep-dive reference guides containing production DDLs, complete JSON schemas, regexes, and framework-specific implementations (React, Vue, Go, Python, Next.js, Vite). Agents load only the specific reference required for their active task.
 
 ---
 
@@ -242,6 +295,8 @@ flowchart TD
 
 | Anti-Pattern | Violation | Correct Practice |
 | :--- | :--- | :--- |
+| **Hardcoding vendor model slugs in agents** | Violates Pillar 1 (1.2) | Use abstract capability classes (`reasoning`, `code`, `critique`) mapped via Project Profile. |
+| **Monolithic skill files exceeding 100 lines** | Violates Pillar 1 (1.3) | Keep `SKILL.md` entrypoint lean and split deep documentation into `references/*.md`. |
 | **Direct bash AST scraping in commands** | Violates Pillar 2 | Call canonical Python detector scripts in `plugins/clube/scripts/`. |
 | **External `pip` packages in scripts** | Violates Pillar 2 | Use only standard library modules (`sys`, `os`, `json`, `re`, `ast`, `urllib`). |
 | **Ad-hoc or free-form audit outputs** | Violates Pillar 3 | Strictly use the `### 1. Plan` through `### 4. Recommended Actions` format. |
