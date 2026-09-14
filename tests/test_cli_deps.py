@@ -171,3 +171,55 @@ def test_init_proceeds_when_only_optional_are_missing(monkeypatch, tmp_path):
 
 def test_doctor_is_registered():
     assert cli.COMMANDS["doctor"] is cli.cmd_doctor
+
+
+# --------------------------------------------------------------------------- #
+# Test runner availability
+# --------------------------------------------------------------------------- #
+
+def test_test_command_explains_itself_when_no_runner_exists(monkeypatch, capsys):
+    """A bare ModuleNotFoundError is a poor first contact for a fresh clone."""
+    monkeypatch.setattr(cli, "deps", deps)
+    monkeypatch.setattr("shutil.which", lambda name: None)
+    monkeypatch.setattr(
+        deps, "check_pytest",
+        lambda *a, **k: deps.DependencyResult(deps.PYTEST, False, "neither uv nor an importable pytest found"),
+    )
+    assert cli.cmd_test([]) == 1
+    err = capsys.readouterr().err
+    assert "Cannot run the test suite" in err
+    assert "Install:" in err
+    assert "doctor" in err
+
+
+def test_test_command_does_not_shell_out_when_no_runner(monkeypatch):
+    """It must fail before spawning a process that would print the raw import error."""
+    calls = []
+    monkeypatch.setattr("shutil.which", lambda name: None)
+    monkeypatch.setattr(
+        deps, "check_pytest",
+        lambda *a, **k: deps.DependencyResult(deps.PYTEST, False, "none found"),
+    )
+    monkeypatch.setattr(cli.subprocess, "call", lambda *a, **k: calls.append(a) or 0)
+    assert cli.cmd_test([]) == 1
+    assert calls == []
+
+
+def test_test_command_uses_uv_when_available(monkeypatch):
+    captured = {}
+    monkeypatch.setattr("shutil.which", lambda name: "/usr/bin/uv" if name == "uv" else None)
+    monkeypatch.setattr(cli.subprocess, "call", lambda cmd, **k: captured.update(cmd=cmd) or 0)
+    assert cli.cmd_test([]) == 0
+    assert captured["cmd"][:2] == ["uv", "run"]
+
+
+def test_test_command_falls_back_to_module_pytest(monkeypatch):
+    captured = {}
+    monkeypatch.setattr("shutil.which", lambda name: None)
+    monkeypatch.setattr(
+        deps, "check_pytest",
+        lambda *a, **k: deps.DependencyResult(deps.PYTEST, True, "importable"),
+    )
+    monkeypatch.setattr(cli.subprocess, "call", lambda cmd, **k: captured.update(cmd=cmd) or 0)
+    assert cli.cmd_test([]) == 0
+    assert captured["cmd"][1:3] == ["-m", "pytest"]

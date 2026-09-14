@@ -274,12 +274,29 @@ def cmd_audit(args):
 
 
 def cmd_test(args):
-    """Run the test suite, preferring uv when available."""
+    """Run the test suite, preferring uv when available.
+
+    Running is stdlib-only, so neither uv nor pytest blocks `init` or `doctor`. But the
+    combination of both missing makes this command impossible, and Python's bare
+    ModuleNotFoundError is a poor first contact for someone who just cloned the repo —
+    so fail here with the fix instead.
+    """
     from shutil import which
 
     if which("uv"):
         cmd = ["uv", "run", "--group", "dev", "pytest", *args]
     else:
+        availability = deps.check_pytest()
+        if not availability.ok:
+            print(
+                f"{RED}Cannot run the test suite: {availability.detail}.{NC}\n"
+                f"  {deps.PYTEST.purpose}\n"
+                f"  Install: {deps.PYTEST.install_hint}\n"
+                f"  Run `clube-config doctor` to review the whole toolchain.",
+                file=sys.stderr,
+            )
+            runlog.log_event("error", "test", "no test runner available")
+            return 1
         cmd = [sys.executable, "-m", "pytest", *args]
     return subprocess.call(cmd, cwd=REPO_ROOT)
 
