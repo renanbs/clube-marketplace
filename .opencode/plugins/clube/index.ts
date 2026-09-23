@@ -44,6 +44,12 @@ const SKILLS = [
     description: "Specialist in fullstack performance, runtime optimization, deployment resilience, and database tuning. Activate when configuring frontend builds, chunk recovery, edge caching, container runtimes, or database indexing.",
     file: "skills/fullstack-performance-resilience/SKILL.md",
   },
+  {
+    id: "release-marketplace",
+    name: "Release Marketplace",
+    description: "Structured release ceremony for the Clube Marketplace and its independently versioned plugins — SemVer parity across all versioned manifests, bilingual changelogs, and the GitHub tag + Release with changelog notes.",
+    file: "skills/release-marketplace/SKILL.md",
+  },
 ] as const
 
 // Command definitions — every command reads its workflow body from

@@ -40,7 +40,7 @@ clube-marketplace/
 ├── .opencode/
 │   ├── opencode.json                   # Configuração do OpenCode V2 (paths relativos portáveis)
 │   └── plugins/                        # Adaptadores de plugin para OpenCode
-│       ├── clube/index.ts              # Adaptador Clube: 6 skills + 6 comandos
+│       ├── clube/index.ts              # Adaptador Clube: 7 skills + 6 comandos
 │       └── code-review/index.ts        # Adaptador code review: 1 skill + 1 comando
 ├── Makefile                            # Alvos operacionais (check, audit, sync, init)
 ├── AGENTS.md                           # Instruções canônicas e Project Profile
