@@ -4,7 +4,7 @@
 
 **Marketplace centralizado e multi-harness de IA para skills, agentes, comandos e fluxos de trabalho sob medida para os produtos SaaS do Clube.**
 
-[![Versão](https://img.shields.io/badge/versão-0.2.0-blue.svg)](CHANGELOG.pt-BR.md)
+[![Versão](https://img.shields.io/badge/versão-0.3.0-blue.svg)](CHANGELOG.pt-BR.md)
 [![Licença](https://img.shields.io/badge/licença-MIT-green.svg)](LICENSE)
 [![Padrões](https://img.shields.io/badge/padrões-Keep%20a%20Changelog-orange.svg)](CHANGELOG.pt-BR.md)
 
@@ -30,10 +30,10 @@ Cada host lê seu catálogo nativo de marketplace a partir da raiz do repositór
 
 ```
 clube-marketplace/
-├── .claude-plugin/marketplace.json     # Catálogo do marketplace para Claude Code (v0.2.0)
-├── .omp-plugin/marketplace.json        # Catálogo do marketplace para Oh My Pi (v0.2.0)
-├── .cursor-plugin/marketplace.json     # Catálogo do marketplace para Cursor (v0.2.0)
-├── .agents/plugins/marketplace.json    # Catálogo do marketplace para Codex (v0.2.0)
+├── .claude-plugin/marketplace.json     # Catálogo do marketplace para Claude Code
+├── .omp-plugin/marketplace.json        # Catálogo do marketplace para Oh My Pi
+├── .cursor-plugin/marketplace.json     # Catálogo do marketplace para Cursor
+├── .agents/plugins/marketplace.json    # Catálogo do marketplace para Codex
 ├── Makefile                            # Alvos operacionais (check, audit, sync, init)
 ├── AGENTS.md                           # Instruções canônicas e Project Profile
 ├── CLAUDE.md                           # Ponteiro -> @AGENTS.md
@@ -51,7 +51,7 @@ clube-marketplace/
 ├── .clube/
 │   └── audit-last.json                 # Runlog estruturado de auditoria e estado persistente
 └── plugins/
-    └── clube/                          # Plugin principal do Clube (v0.2.0)
+    └── clube/                          # Plugin principal do Clube (v0.3.0)
         ├── .claude-plugin/plugin.json
         ├── .cursor-plugin/plugin.json
         ├── .codex-plugin/plugin.json
@@ -81,6 +81,13 @@ clube-marketplace/
             │   └── references/         # Funções de máscara, higienização Sentry e DDLs
             └── fullstack-performance-resilience/# Recuperação de chunks, cache e tuning
                 └── references/         # Recuperação Vite, headers de borda e índices DB
+    └── code-review/                    # Plugin de code review (v0.1.0, versionado à parte)
+        ├── .{claude,cursor,codex,omp}-plugin/plugin.json
+        ├── commands/review.md          # /code-review:review
+        ├── agents/reviewer.md          # Revisor somente leitura (classe critique)
+        └── skills/code-review/
+            ├── SKILL.md                # Checklist geral, escala de severidade e veredito
+            └── references/             # go.md, typescript.md, rust.md (carregados sob demanda)
 ```
 
 ---
@@ -91,12 +98,14 @@ clube-marketplace/
 ```bash
 /plugin marketplace add git@github.com:clubedepontos/clube-marketplace.git
 /plugin install clube@clube
+/plugin install code-review@clube
 ```
 
 ### Oh My Pi (OMP)
 ```bash
 /marketplace add https://github.com/clubedepontos/clube-marketplace
 /marketplace install --scope project clube@clube
+/marketplace install --scope project code-review@clube
 ```
 *Nota: Ao utilizar agentes customizados no OMP, execute `/clube:omp-setup` uma vez para configurar as sobreposições de modelo.*
 
@@ -105,12 +114,14 @@ Adicione como marketplace de equipe via **Configurações → Plugins**, ou crie
 ```bash
 mkdir -p ~/.cursor/plugins/local
 ln -s "$(pwd)/plugins/clube" ~/.cursor/plugins/local/clube
+ln -s "$(pwd)/plugins/code-review" ~/.cursor/plugins/local/code-review
 ```
 
 ### Codex
 ```bash
 codex plugin marketplace add clubedepontos/clube-marketplace --ref main
 codex plugin install clube --source clube
+codex plugin install code-review --source clube
 ```
 
 ---
@@ -156,6 +167,16 @@ Todas as skills verticais de SaaS seguem a **Arquitetura de Divulgação Progres
 | `/clube:omp-setup` | (Exclusivo OMP) Configura sobreposições de modelo para agentes do plugin, garantindo despacho suave de subagentes. |
 | `/clube:help` (ou `/help`) | Exibe visão geral completa dos comandos, skills e princípios fundamentais de engenharia. |
 
+## Plugin de Code Review (`plugins/code-review`)
+
+Um plugin separado, versionado de forma independente do `clube` (atualmente `v0.1.0`), para code review estruturado e baseado em evidências em qualquer projeto.
+
+| Componente | Nome | Foco |
+| :--- | :--- | :--- |
+| Comando | `/code-review:review` | Revisa as mudanças staged (ou, na falta delas, a branch atual), uma branch (`<branch>`) ou um pull request (`#<número>`). |
+| Agente | `reviewer` | Somente leitura, classe `critique`. Carrega só as regras das linguagens presentes no diff, aplica as convenções do `AGENTS.md` do projeto e responde `APPROVE` ou `CHANGES-REQUESTED`. |
+| Skill | `code-review:code-review` | Checklist geral (corretude, tratamento de erros, nomes, performance, segurança, testes, contratos de API, convenções) e escala de severidade, com `references/go.md`, `references/typescript.md` e `references/rust.md`. |
+
 ---
 
 ## Comandos Operacionais da CLI e Makefile
@@ -166,6 +187,14 @@ O repositório inclui um utilitário de linha de comando (`bin/clube-config`) e 
 # Audita detecção do harness ativo, catálogos de marketplace e integridade dos plugins
 make check
 ./bin/clube-config check
+
+# Roda a suíte de testes em Python (pytest via uv)
+make test
+./bin/clube-config test
+
+# Verifica dependências obrigatórias e opcionais da toolchain (python3, uv, pytest, make, git)
+make doctor
+./bin/clube-config doctor
 
 # Executa auditoria determinística 360° de prontidão para produção em SaaS
 make audit
@@ -198,4 +227,4 @@ O Clube AI Marketplace é regido pelos **5 Pilares Obrigatórios** definidos na 
    - `### 3. Summary`
    - `### 4. Recommended Actions`
 4. **Persistência de Estado e Runlog Estruturado:** Auditorias automatizadas gravam artefatos estruturados de execução em `.clube/audit-last.json` com renderização visual no terminal (tabelas ASCII, barras de saúde gráfica, badges coloridos).
-5. **Paridade SemVer e Documentação Bilíngue:** Todos os 9 arquivos de manifesto declaram estritamente versões SemVer idênticas (`0.2.0`), acompanhados por paridade completa de documentação bilíngue em Inglês (`README.md`, `CHANGELOG.md`) e Português do Brasil (`README.pt-BR.md`, `CHANGELOG.pt-BR.md`).
+5. **Paridade SemVer e Documentação Bilíngue:** Todos os 9 arquivos de manifesto declaram estritamente versões SemVer idênticas (`0.3.0`), enquanto plugins adicionais como o `code-review` têm versão própria, mantida consistente entre seus manifests e entradas de catálogo. Toda a documentação mantém paridade bilíngue completa em Inglês (`README.md`, `CHANGELOG.md`) e Português do Brasil (`README.pt-BR.md`, `CHANGELOG.pt-BR.md`).
