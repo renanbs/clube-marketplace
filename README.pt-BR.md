@@ -4,7 +4,7 @@
 
 **Marketplace centralizado e multi-harness de IA para skills, agentes, comandos e fluxos de trabalho sob medida para os produtos SaaS do Clube.**
 
-[![Versão](https://img.shields.io/badge/versão-0.5.0-blue.svg)](CHANGELOG.pt-BR.md)
+[![Versão](https://img.shields.io/badge/versão-0.6.0-blue.svg)](CHANGELOG.pt-BR.md)
 [![Licença](https://img.shields.io/badge/licença-MIT-green.svg)](LICENSE)
 [![Padrões](https://img.shields.io/badge/padrões-Keep%20a%20Changelog-orange.svg)](CHANGELOG.pt-BR.md)
 
@@ -59,7 +59,7 @@ clube-marketplace/
 ├── .clube/
 │   └── audit-last.json                 # Runlog estruturado de auditoria e estado persistente
 └── plugins/
-    └── clube/                          # Plugin principal do Clube (v0.5.0)
+    └── clube/                          # Plugin principal do Clube (v0.6.0)
         ├── .claude-plugin/plugin.json
         ├── .cursor-plugin/plugin.json
         ├── .codex-plugin/plugin.json

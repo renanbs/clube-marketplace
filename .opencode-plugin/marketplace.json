@@ -10,7 +10,7 @@
   "plugins": [
     {
       "name": "clube",
-      "version": "0.5.0",
+      "version": "0.6.0",
       "source": "./plugins/clube",
       "description": "Clube dev workflows, fullstack performance, SaaS SEO/GEO, marketing attribution, privacy observability, and guided init."
     },
