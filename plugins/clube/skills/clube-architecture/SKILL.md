@@ -295,6 +295,7 @@ flowchart TD
 ### 5.1 SemVer Parity
 - All release tags adhere strictly to Semantic Versioning (`vMAJOR.MINOR.PATCH`).
 - Version numbers must be bumped synchronously across **all** harness manifests and `package.json`. No manifest may drift ahead or lag behind.
+- **Additional plugins are versioned independently.** Any plugin other than `clube` (e.g. `code-review`) carries its own version: its 4 plugin manifests and its entry in every marketplace catalog must agree with each other, but not with `package.json`. `make check` locates each catalog entry by plugin name, so catalog order is irrelevant.
 
 #### Single Source of Truth
 `package.json` holds the canonical version. Every other declaration must either be verified against it by `make check` or be **derived from it at runtime** — never both duplicated and unverified.
