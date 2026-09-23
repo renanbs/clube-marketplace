@@ -44,7 +44,7 @@ def build_repo(root, *, version="0.2.0", skills=None, agents=None):
     for manifest in check.MARKET_MANIFESTS:
         path = root / manifest
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps({"plugins": [{"version": version}]}), encoding="utf-8")
+        path.write_text(json.dumps({"plugins": [{"name": "clube", "version": version}]}), encoding="utf-8")
 
     (root / "package.json").write_text(json.dumps({"version": version}), encoding="utf-8")
 
@@ -195,6 +195,81 @@ def test_missing_manifest_is_detected(tmp_path):
     (root / ".claude-plugin" / "marketplace.json").unlink()
     _, problems = check.check_repository(tmp_path)
     assert any("Missing marketplace catalog" in p.message for p in problems)
+
+
+# --------------------------------------------------------------------------- #
+# Per-plugin versioning
+# --------------------------------------------------------------------------- #
+
+def add_plugin(root, name, version, *, catalog_version=None, listed=True):
+    """Add a second plugin with its own version, optionally listed in every catalog."""
+    plugin = root / "plugins" / name
+    for manifest in check.PLUGIN_MANIFESTS:
+        path = plugin / manifest
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({"version": version}), encoding="utf-8")
+    if listed:
+        for manifest in check.MARKET_MANIFESTS:
+            path = root / manifest
+            data = json.loads(path.read_text(encoding="utf-8"))
+            data["plugins"].append({"name": name, "version": catalog_version or version})
+            path.write_text(json.dumps(data), encoding="utf-8")
+    return plugin
+
+
+def test_independently_versioned_plugin_is_valid(tmp_path):
+    """A second plugin on its own version must not trip the repo-wide parity check."""
+    root = build_repo(tmp_path, version="0.3.0")
+    add_plugin(root, "code-review", "0.1.0")
+    report, problems = check.check_repository(root)
+    assert problems == []
+    assert report["plugins"]["code-review"]["version"] == "0.1.0"
+
+
+def test_plugin_missing_from_catalog_is_detected(tmp_path):
+    root = build_repo(tmp_path)
+    add_plugin(root, "code-review", "0.1.0", listed=False)
+    _, problems = check.check_repository(root)
+    missing = [p for p in problems if "not listed in" in p.message]
+    assert len(missing) == len(check.MARKET_MANIFESTS)
+    assert all(p.plugin == "code-review" for p in missing)
+
+
+def test_catalog_version_drift_is_detected(tmp_path):
+    root = build_repo(tmp_path)
+    add_plugin(root, "code-review", "0.1.0", catalog_version="0.0.9")
+    _, problems = check.check_repository(root)
+    assert any("lists '0.0.9', manifests declare '0.1.0'" in p.message for p in problems)
+
+
+def test_plugin_manifests_disagreeing_is_detected(tmp_path):
+    root = build_repo(tmp_path)
+    plugin = add_plugin(root, "code-review", "0.1.0")
+    (plugin / ".omp-plugin/plugin.json").write_text(json.dumps({"version": "0.2.0"}), encoding="utf-8")
+    _, problems = check.check_repository(root)
+    assert any("plugin manifests disagree" in p.message for p in problems)
+
+
+def test_repo_parity_ignores_catalog_order(tmp_path):
+    """Parity used to read plugins[0]; listing another plugin first broke it spuriously."""
+    root = build_repo(tmp_path, version="0.3.0")
+    add_plugin(root, "code-review", "0.1.0")
+    for manifest in check.MARKET_MANIFESTS:
+        path = root / manifest
+        data = json.loads(path.read_text(encoding="utf-8"))
+        data["plugins"].reverse()
+        path.write_text(json.dumps(data), encoding="utf-8")
+    _, problems = check.check_repository(root)
+    assert problems == []
+
+
+def test_problems_are_attributed_to_their_plugin(tmp_path):
+    """The CLI prints problems under each plugin; unattributed ones leaked into every plugin."""
+    root = build_repo(tmp_path, agents={"BROKEN.md": AGENT_MISSING_FIELDS})
+    add_plugin(root, "code-review", "0.1.0")
+    _, problems = check.check_repository(root)
+    agent_problems = [p for p in problems if p.kind == "agent"]
+    assert agent_problems and all(p.plugin == "clube" for p in agent_problems)
 
 
 # --------------------------------------------------------------------------- #

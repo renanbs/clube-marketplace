@@ -95,13 +95,20 @@ def cmd_check(args):
 
     for plugin_name, entry in report["plugins"].items():
         print(f"\n  [Plugin: {BOLD}{plugin_name}{NC}]")
+        own = [p for p in problems if p.plugin == plugin_name]
         for manifest, present in entry["manifests"].items():
             if present:
                 print(f"    ✅ Plugin manifest: {manifest}")
             else:
                 print(f"    ⏭️ Optional plugin manifest omitted: {manifest}")
 
-        skill_problems = by_kind.get("skill", [])
+        version_problems = [p for p in own if p.kind == "plugin-version"]
+        for problem in version_problems:
+            print(f"    ❌ {problem.message}")
+        if not version_problems:
+            print(f"    ✅ Version: v{entry['version']} (manifests and catalogs aligned)")
+
+        skill_problems = [p for p in own if p.kind == "skill"]
         for problem in skill_problems:
             print(f"    ❌ {problem.message}")
         if skill_problems:
@@ -111,7 +118,7 @@ def cmd_check(args):
         elif entry["skills"]:
             print(f"    ✅ Skills directory: {entry['skills']} valid modular skills")
 
-        for problem in by_kind.get("agent", []):
+        for problem in (p for p in own if p.kind == "agent"):
             print(f"    ❌ {problem.message}")
         if entry["invalid_agents"]:
             print(f"    ❌ Agents directory: {entry['invalid_agents']} invalid, {entry['agents']} valid specialist agents")
