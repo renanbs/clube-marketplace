@@ -1,0 +1,38 @@
+{
+  "name": "code-review",
+  "version": "0.1.0",
+  "description": "Structured code review with a language-agnostic core and on-demand Go, TypeScript, and Rust rules.",
+  "author": {
+    "name": "Clube",
+    "email": "contato@clube.com.br",
+    "url": "https://github.com/clube/clube-marketplace"
+  },
+  "homepage": "https://github.com/clube/clube-marketplace",
+  "repository": "https://github.com/clube/clube-marketplace",
+  "license": "MIT",
+  "keywords": [
+    "code-review",
+    "review",
+    "quality",
+    "go",
+    "typescript",
+    "rust",
+    "skills",
+    "agents"
+  ],
+  "skills": "./skills/",
+  "commands": "./commands/",
+  "agents": "./agents/",
+  "interface": {
+    "displayName": "Code Review",
+    "shortDescription": "Structured code review for Go, TypeScript, and Rust",
+    "longDescription": "Evidence-based code review covering correctness, error handling, performance, security surface, test quality, and conventions, with language-specific rules loaded only for languages present in the diff.",
+    "developerName": "Clube",
+    "category": "Developer Tools",
+    "websiteURL": "https://github.com/clube/clube-marketplace",
+    "defaultPrompt": [
+      "Review my staged changes with code-review:review",
+      "Review this pull request with code-review:review"
+    ]
+  }
+}
