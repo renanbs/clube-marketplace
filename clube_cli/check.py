@@ -22,6 +22,7 @@ MARKET_MANIFESTS = (
     ".omp-plugin/marketplace.json",
     ".cursor-plugin/marketplace.json",
     ".agents/plugins/marketplace.json",
+    ".opencode-plugin/marketplace.json",
 )
 
 PLUGIN_MANIFESTS = (
@@ -29,6 +30,7 @@ PLUGIN_MANIFESTS = (
     ".cursor-plugin/plugin.json",
     ".codex-plugin/plugin.json",
     ".omp-plugin/plugin.json",
+    ".opencode-plugin/plugin.json",
 )
 
 # Manifests that must all agree on one version. (path, kind) — "market" catalogs carry
@@ -40,11 +42,17 @@ VERSIONED_MANIFESTS = (
     (".omp-plugin/marketplace.json", "market"),
     (".cursor-plugin/marketplace.json", "market"),
     (".agents/plugins/marketplace.json", "market"),
+    (".opencode-plugin/marketplace.json", "market"),
     ("plugins/clube/.claude-plugin/plugin.json", "plugin"),
     ("plugins/clube/.cursor-plugin/plugin.json", "plugin"),
     ("plugins/clube/.codex-plugin/plugin.json", "plugin"),
     ("plugins/clube/.omp-plugin/plugin.json", "plugin"),
+    ("plugins/clube/.opencode-plugin/plugin.json", "plugin"),
 )
+
+# Config files OpenCode V2 reads to wire the marketplace into a session. OpenCode has
+# no native marketplace catalog: it loads plugins and agents from opencode.json.
+OPCODE_CONFIG_FILES = ("opencode.json", ".opencode/opencode.json")
 
 # Skills that legitimately ship without a references/ subdirectory. Stated as an
 # exemption list rather than an allowlist of vertical skills, so a newly added vertical
@@ -279,6 +287,74 @@ def check_plugin_version(repo_root, plugin_dir):
     return version, problems
 
 
+def check_opencode_integration(repo_root):
+    """OpenCode V2 consumes the marketplace without a native catalog.
+
+    The wiring lives in opencode.json: plugin refs point at `.opencode/plugins/<name>/`
+    adapter packages, and each agent points its `system` at the canonical agent markdown
+    in `plugins/`. A missing adapter or a dangling `system` path silently loses skills,
+    commands, or agents on the OpenCode host, so the gate must catch it.
+    """
+    repo_root = Path(repo_root)
+    problems = []
+
+    for rel_path in OPCODE_CONFIG_FILES:
+        path = repo_root / rel_path
+        if not path.is_file():
+            problems.append(Problem("opencode", f"Missing OpenCode config: {rel_path}"))
+            continue
+        try:
+            data = read_json(path)
+        except Exception as exc:
+            problems.append(Problem("opencode", f"{rel_path} ({exc})"))
+            continue
+        if not isinstance(data, dict):
+            problems.append(Problem("opencode", f"{rel_path}: expected a JSON object"))
+            continue
+        if rel_path != "opencode.json":
+            continue
+        agents = data.get("agents")
+        if not isinstance(agents, dict):
+            problems.append(Problem("opencode", "opencode.json: 'agents' must be an object"))
+            continue
+        for name, agent in agents.items():
+            system = agent.get("system") if isinstance(agent, dict) else None
+            if not system or not isinstance(system, str):
+                problems.append(
+                    Problem("opencode", f"opencode.json: agent '{name}' has no system path")
+                )
+                continue
+            if not (repo_root / system).is_file():
+                problems.append(
+                    Problem("opencode", f"opencode.json: agent '{name}' system path not found: {system}")
+                )
+
+    catalog = repo_root / ".opencode-plugin/marketplace.json"
+    if catalog.is_file():
+        try:
+            entries = read_json(catalog).get("plugins") or []
+        except Exception as exc:
+            problems.append(Problem("opencode", f".opencode-plugin/marketplace.json ({exc})"))
+            entries = []
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            name = entry.get("name")
+            if not name:
+                continue
+            adapter = repo_root / ".opencode" / "plugins" / name / "index.ts"
+            if not adapter.is_file():
+                problems.append(
+                    Problem(
+                        "opencode",
+                        f"No OpenCode adapter for catalog plugin '{name}': "
+                        f"expected .opencode/plugins/{name}/index.ts",
+                    )
+                )
+
+    return problems
+
+
 def check_repository(repo_root):
     """Run every structural check. Returns (report, [Problem])."""
     repo_root = Path(repo_root)
@@ -355,5 +431,9 @@ def check_repository(repo_root):
     target, matched, total, semver_problems = check_semver_parity(repo_root)
     report["semver"] = {"target": target, "matched": matched, "total": total}
     problems.extend(semver_problems)
+
+    opencode_problems = check_opencode_integration(repo_root)
+    report["opencode"] = {"problems": len(opencode_problems)}
+    problems.extend(opencode_problems)
 
     return report, problems

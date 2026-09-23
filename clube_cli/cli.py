@@ -89,6 +89,13 @@ def cmd_check(args):
         else:
             print(f"  ❌ Missing marketplace catalog: {BOLD}{manifest}{NC}")
 
+    opencode_problems = [p for p in problems if p.kind == "opencode"]
+    if opencode_problems:
+        for problem in opencode_problems:
+            print(f"  ❌ OpenCode integration: {problem.message}")
+    else:
+        print(f"  ✅ OpenCode integration: adapters + opencode.json wired (skills, commands, agents)")
+
     by_kind = {}
     for problem in problems:
         by_kind.setdefault(problem.kind, []).append(problem)
@@ -146,6 +153,7 @@ def cmd_check(args):
         ("Status", status),
         ("Active Harness", harness.friendly_name(active)),
         ("SemVer Parity", semver_status),
+        ("OpenCode Integration", "yes" if not opencode_problems else f"{len(opencode_problems)} problem(s)"),
         ("AGENTS.md Present", "yes" if agents_present else "no"),
         ("Source of Truth", "AGENTS.md"),
         ("Plugins Directory", "plugins/ (modular marketplace structure)"),

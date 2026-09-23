@@ -65,6 +65,27 @@ def build_repo(root, *, version="0.2.0", skills=None, agents=None):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content, encoding="utf-8")
 
+    # OpenCode integration: adapters + configs, mirroring what a real repo ships.
+    opencode_catalog = root / ".opencode-plugin/marketplace.json"
+    plugin_names = [
+        entry["name"] for entry in json.loads(opencode_catalog.read_text(encoding="utf-8"))["plugins"]
+    ]
+    for name in plugin_names:
+        adapter = root / ".opencode" / "plugins" / name / "index.ts"
+        adapter.parent.mkdir(parents=True, exist_ok=True)
+        adapter.write_text("export default { id: 'placeholder' }\n", encoding="utf-8")
+
+    agents_config = {
+        name: {"mode": "subagent", "system": f"./plugins/clube/agents/{name}"}
+        for name in (agents or {})
+    }
+    config = {
+        "plugins": [f"./.opencode/plugins/{name}" for name in plugin_names],
+        "agents": agents_config,
+    }
+    (root / "opencode.json").write_text(json.dumps(config), encoding="utf-8")
+    (root / ".opencode" / "opencode.json").write_text(json.dumps(config), encoding="utf-8")
+
     return root
 
 
@@ -214,6 +235,9 @@ def add_plugin(root, name, version, *, catalog_version=None, listed=True):
             data = json.loads(path.read_text(encoding="utf-8"))
             data["plugins"].append({"name": name, "version": catalog_version or version})
             path.write_text(json.dumps(data), encoding="utf-8")
+        adapter = root / ".opencode" / "plugins" / name / "index.ts"
+        adapter.parent.mkdir(parents=True, exist_ok=True)
+        adapter.write_text("export default { id: 'placeholder' }\n", encoding="utf-8")
     return plugin
 
 
@@ -323,6 +347,72 @@ def test_real_repository_semver_parity_holds():
     assert problems == []
     assert matched == total
     assert target
+
+
+# --------------------------------------------------------------------------- #
+# OpenCode integration
+# --------------------------------------------------------------------------- #
+
+def test_opencode_catalog_plugin_requires_adapter(tmp_path):
+    """A plugin listed in the OpenCode catalog needs .opencode/plugins/<name>/index.ts."""
+    root = build_repo(tmp_path)
+    (root / ".opencode" / "plugins" / "clube" / "index.ts").unlink()
+    _, problems = check.check_repository(root)
+    assert any(
+        "No OpenCode adapter" in p.message and "clube" in p.message
+        for p in problems
+    )
+
+
+def test_opencode_agent_system_path_must_resolve(tmp_path):
+    """OpenCode loads agent bodies from the canonical plugins/ files — dangling paths
+    silently unload the agent, so the gate must resolve them."""
+    root = build_repo(tmp_path, agents={"a.md": AGENT_OK})
+    config = json.loads((root / "opencode.json").read_text(encoding="utf-8"))
+    config["agents"]["expert-seo"] = {"mode": "subagent", "system": "./plugins/clube/agents/missing.md"}
+    (root / "opencode.json").write_text(json.dumps(config), encoding="utf-8")
+    _, problems = check.check_repository(root)
+    assert any("system path not found" in p.message for p in problems)
+
+
+def test_opencode_agent_requires_system(tmp_path):
+    root = build_repo(tmp_path, agents={"a.md": AGENT_OK})
+    config = json.loads((root / "opencode.json").read_text(encoding="utf-8"))
+    config["agents"]["expert-seo"] = {"mode": "subagent"}
+    (root / "opencode.json").write_text(json.dumps(config), encoding="utf-8")
+    _, problems = check.check_repository(root)
+    assert any("has no system path" in p.message for p in problems)
+
+
+def test_opencode_config_must_parse(tmp_path):
+    root = build_repo(tmp_path)
+    (root / ".opencode" / "opencode.json").write_text("{not json", encoding="utf-8")
+    _, problems = check.check_repository(root)
+    assert any("opencode.json" in p.message for p in problems)
+
+
+def test_opencode_configs_cannot_be_missing(tmp_path):
+    root = build_repo(tmp_path)
+    (root / "opencode.json").unlink()
+    (root / ".opencode" / "opencode.json").unlink()
+    _, problems = check.check_repository(root)
+    missing = [p for p in problems if "Missing OpenCode config" in p.message]
+    assert len(missing) == len(check.OPCODE_CONFIG_FILES)
+
+
+def test_real_repository_opencode_integration_passes():
+    """The repository itself ships working OpenCode adapters for every catalog plugin
+    and every agent system path resolves."""
+    assert check.check_opencode_integration(cli_repo_root()) == []
+
+
+def test_second_plugin_requires_its_own_adapter(tmp_path):
+    root = build_repo(tmp_path)
+    add_plugin(root, "code-review", "0.1.0")
+    (root / ".opencode" / "plugins" / "code-review" / "index.ts").unlink()
+    _, problems = check.check_repository(root)
+    assert any("code-review" in p.message and "No OpenCode adapter" in p.message
+               for p in problems)
 
 
 def cli_repo_root():

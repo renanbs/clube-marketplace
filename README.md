@@ -21,8 +21,9 @@ The **Clube AI Marketplace** provides a unified distribution model for AI coding
 - **Oh My Pi (OMP)** (`.omp-plugin/`)
 - **Cursor** (`.cursor-plugin/`)
 - **Codex / OpenAI Agents** (`.agents/plugins/`)
+- **OpenCode V2** (`.opencode-plugin/` + `.opencode/` adapters)
 
-Each host reads its native marketplace catalog from the repository root, consuming modular plugins defined under `plugins/` (such as `plugins/clube`).
+Each host reads its native marketplace catalog from the repository root, consuming modular plugins defined under `plugins/` (such as `plugins/clube`). OpenCode V2 has no native marketplace — it consumes `opencode.json` plus the TypeScript adapters under `.opencode/plugins/`.
 
 ---
 
@@ -34,6 +35,13 @@ clube-marketplace/
 ├── .omp-plugin/marketplace.json        # Oh My Pi marketplace catalog
 ├── .cursor-plugin/marketplace.json     # Cursor marketplace catalog
 ├── .agents/plugins/marketplace.json    # Codex marketplace catalog
+├── .opencode-plugin/marketplace.json   # OpenCode V2 marketplace catalog
+├── opencode.json                       # OpenCode V2 wiring (plugins + agents)
+├── .opencode/
+│   ├── opencode.json                   # OpenCode V2 config (portable relative paths)
+│   └── plugins/                        # OpenCode plugin adapters
+│       ├── clube/index.ts              # Clube adapter: 6 skills + 6 commands
+│       └── code-review/index.ts        # Code review adapter: 1 skill + 1 command
 ├── Makefile                            # Operational targets (check, audit, sync, init)
 ├── AGENTS.md                           # Canonical instructions & Project Profile
 ├── CLAUDE.md                           # Pointer -> @AGENTS.md
@@ -56,6 +64,7 @@ clube-marketplace/
         ├── .cursor-plugin/plugin.json
         ├── .codex-plugin/plugin.json
         ├── .omp-plugin/plugin.json
+        ├── .opencode-plugin/plugin.json
         ├── scripts/                    # Deterministic audit runners & ASCII UI engine
         │   ├── ui.py                   # ASCII box headers, badges, tables & health bars
         │   ├── audit-all.py            # Unified 360° audit runner
@@ -82,7 +91,7 @@ clube-marketplace/
             └── fullstack-performance-resilience/# Chunk recovery, caching & tuning
                 └── references/         # Vite recovery, edge headers & DB indexing
     └── code-review/                    # Code review plugin (v0.1.0, versioned independently)
-        ├── .{claude,cursor,codex,omp}-plugin/plugin.json
+        ├── .{claude,cursor,codex,omp,opencode}-plugin/plugin.json
         ├── commands/review.md          # /code-review:review
         ├── agents/reviewer.md          # Read-only reviewer (critique class)
         └── skills/code-review/
@@ -123,6 +132,45 @@ codex plugin marketplace add clubedepontos/clube-marketplace --ref main
 codex plugin install clube --source clube
 codex plugin install code-review --source clube
 ```
+
+### OpenCode V2
+
+OpenCode V2 has no native marketplace — plugins are wired through `opencode.json`.
+Each plugin adapter ships from `.opencode/plugins/<plugin>/` with a `package.json`
+(pointing at `@opencode/plugin`); run `npm install` (or `bun install`) there once,
+then reference the adapter from your project's `opencode.json`:
+
+```bash
+# From this repository (local development)
+cd .opencode/plugins/clube && npm install
+cd ../code-review && npm install
+```
+
+Then add to your project's `opencode.json`:
+
+```json
+{
+  "plugins": [
+    "/path/to/clube-marketplace/.opencode/plugins/clube",
+    "/path/to/clube-marketplace/.opencode/plugins/code-review"
+  ],
+  "agents": {
+    "expert-seo": { "mode": "subagent", "system": "/path/to/clube-marketplace/plugins/clube/agents/expert-seo.md" },
+    "expert-tracking": { "mode": "subagent", "system": "/path/to/clube-marketplace/plugins/clube/agents/expert-tracking.md" },
+    "expert-privacy": { "mode": "subagent", "system": "/path/to/clube-marketplace/plugins/clube/agents/expert-privacy.md" },
+    "expert-performance": { "mode": "subagent", "system": "/path/to/clube-marketplace/plugins/clube/agents/expert-performance.md" },
+    "clube-auditor": { "mode": "subagent", "system": "/path/to/clube-marketplace/plugins/clube/agents/clube-auditor.md" },
+    "reviewer": { "mode": "subagent", "system": "/path/to/clube-marketplace/plugins/code-review/agents/reviewer.md" }
+  }
+}
+```
+
+The signals are the same on every harness: skills (`/skill init`, `/skill clube-architecture`, …),
+slash commands (`/clube:init`, `/clube:audit`, `/clube:audit-seo`, `/code-review:review`, …),
+and named subagents (`expert-seo`, `reviewer`, …). Agents carry no `model` so they
+inherit the session model — the marketplace stays provider-agnostic. This repository
+already ships a ready-to-use `opencode.json` and `.opencode/opencode.json`
+(portable relative paths, resolves when OpenCode runs inside the checkout).
 
 ---
 
@@ -219,7 +267,7 @@ make install-cli
 
 The Clube AI Marketplace is governed by the **5 Mandatory Pillars** defined in `clube:clube-architecture`:
 
-1. **Multi-Harness Modular Plugin Standard:** All AI harnesses (Claude Code, Cursor, Codex, Oh My Pi) consume modular plugins from `plugins/<name>/` via root marketplace catalogs.
+1. **Multi-Harness Modular Plugin Standard:** All AI harnesses (Claude Code, Cursor, Codex, Oh My Pi, OpenCode V2) consume modular plugins from `plugins/<name>/` via root marketplace catalogs.
 2. **Hybrid Audit Architecture:** Deterministic Python static scripts (`plugins/clube/scripts/`) execute baseline checks fast, persist structured state in `.clube/audit-last.json`, and feed LLM slash commands with concrete evidence.
 3. **4-Phase Output Contract:** Every command, skill, and AI workflow adheres to the strict 4-phase contract:
    - `### 1. Plan`
@@ -227,4 +275,4 @@ The Clube AI Marketplace is governed by the **5 Mandatory Pillars** defined in `
    - `### 3. Summary`
    - `### 4. Recommended Actions`
 4. **Structured Runlog & State Persistence:** Automated audits record structured execution artifacts in `.clube/audit-last.json` with visual terminal rendering (ASCII tables, health bars, badges).
-5. **SemVer Parity & Bilingual Documentation:** All 9 manifest files strictly declare identical SemVer versions (`0.4.0`), while additional plugins such as `code-review` carry their own version, kept consistent across their manifests and catalog entries. All documentation keeps complete bilingual parity in English (`README.md`, `CHANGELOG.md`) and Brazilian Portuguese (`README.pt-BR.md`, `CHANGELOG.pt-BR.md`).
+5. **SemVer Parity & Bilingual Documentation:** All versioned manifests (root `package.json`, 5 marketplace catalogs, 5 `clube` plugin manifests) strictly declare identical SemVer versions (`0.4.0`), while additional plugins such as `code-review` carry their own version, kept consistent across their manifests and catalog entries. All documentation keeps complete bilingual parity in English (`README.md`, `CHANGELOG.md`) and Brazilian Portuguese (`README.pt-BR.md`, `CHANGELOG.pt-BR.md`).

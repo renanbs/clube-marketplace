@@ -5,7 +5,7 @@ description: Displays overview of Clube AI Marketplace commands, skills, and eng
 
 # Clube AI Marketplace — Help & Overview
 
-The **Clube AI Marketplace** provides standardized AI workflows, stack-expert skills, and multi-harness distribution across Claude Code, Cursor, Codex, and Oh My Pi.
+The **Clube AI Marketplace** provides standardized AI workflows, stack-expert skills, and multi-harness distribution across Claude Code, Cursor, Codex, Oh My Pi, and OpenCode V2.
 
 ## Available Slash Commands
 
@@ -17,6 +17,10 @@ The **Clube AI Marketplace** provides standardized AI workflows, stack-expert sk
 - `/clube:audit-performance` — Audits SPA chunk recovery (404 prevention), CDN cache headers, and container limits.
 - `/clube:audit-seo` — Audits `/llms.txt`, private route indexing protection, and Schema.org structured data.
 - `/clube:audit-tracking` — Audits root domain cookies, Meta CAPI deduplication, and acquisition context.
+
+> **OpenCode V2:** all the commands above (except `/clube:omp-setup`, which is OMP-only), the
+> skills, and the named agents below are available in OpenCode via `opencode.json` + the
+> adapters in `.opencode/plugins/` (see the README installation section).
 
 ## Available Specialist Agents
 

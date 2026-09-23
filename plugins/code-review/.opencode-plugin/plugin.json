@@ -1,0 +1,21 @@
+{
+  "name": "code-review",
+  "version": "0.1.0",
+  "description": "Structured code review with a language-agnostic core and on-demand Go, TypeScript, and Rust rules.",
+  "author": {
+    "name": "Clube"
+  },
+  "repository": "https://github.com/clubedepontos/clube-marketplace",
+  "license": "MIT",
+  "keywords": [
+    "code-review",
+    "review",
+    "pull-request",
+    "go",
+    "typescript",
+    "rust"
+  ],
+  "opencode": {
+    "plugin": "./.opencode/plugins/code-review/index.ts"
+  }
+}

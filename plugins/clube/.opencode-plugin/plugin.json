@@ -1,0 +1,24 @@
+{
+  "name": "clube",
+  "version": "0.4.0",
+  "description": "Clube dev workflows, fullstack performance, SaaS SEO/GEO, marketing attribution, privacy observability, and guided init.",
+  "author": {
+    "name": "Clube"
+  },
+  "repository": "https://github.com/clubedepontos/clube-marketplace",
+  "license": "MIT",
+  "keywords": [
+    "workflow",
+    "audit",
+    "seo",
+    "geo",
+    "tracking",
+    "privacy",
+    "lgpd",
+    "performance",
+    "onboarding"
+  ],
+  "opencode": {
+    "plugin": "./.opencode/plugins/clube/index.ts"
+  }
+}
