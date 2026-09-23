@@ -5,7 +5,7 @@ Todas as mudanças notáveis no Clube Marketplace serão documentadas neste arqu
 O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/spec/v2.0.0.html).
 
-## [Não lançado]
+## [0.5.0] - 2026-09-23
 
 ### Adicionado
 - **Suporte ao OpenCode V2:** distribuição de primeira classe para o harness OpenCode.
@@ -14,6 +14,7 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/spec
   - `opencode.json` raiz e `.opencode/opencode.json` conectando os adaptadores e 6 subagentes nomeados (`expert-seo`, `expert-tracking`, `expert-privacy`, `expert-performance`, `clube-auditor`, `reviewer`) cujo `system` resolve para os arquivos canônicos de agente em `plugins/`. Os agentes omitem `model` para herdar o modelo da sessão (independente de provedor).
   - O `make check` agora audita a integração OpenCode: ambos os configs precisam fazer parse, cada plugin do catálogo precisa ter um adaptador `index.ts` e cada `system` de agente precisa resolver.
 - Documentação bilíngue atualizada: seções de instalação do README/README.pt-BR, `clube:help` e `AGENTS.md`.
+- `package.json`, as entradas do `clube` nos catálogos, os 5 manifests do plugin `clube`, o frontmatter das skills verticais e o adaptador OpenCode sincronizados em `v0.5.0`. O `code-review` permanece com a própria versão, `v0.1.0`.
 
 ## [0.4.0] - 2026-09-23
 
