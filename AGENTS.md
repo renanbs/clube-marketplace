@@ -3,7 +3,7 @@
 ## Project Profile
 - **Project Name:** Clube Marketplace
 - **Description:** Centralized AI marketplace, skills, agents, and multi-harness distribution suite for Clube projects.
-- **Primary Architecture:** Multi-Harness Plugin Marketplace Architecture (Claude Code, Cursor, Codex, Oh My Pi).
+- **Primary Architecture:** Multi-Harness Plugin Marketplace Architecture (Claude Code, Cursor, Codex, Oh My Pi, OpenCode V2).
 - **Single Source of Truth:** This `AGENTS.md` file is authoritative across all AI coding harnesses.
 
 ## Development Conventions

@@ -1,0 +1,16 @@
+{
+  "name": "@clube/opencode-plugin-code-review",
+  "version": "0.1.0",
+  "description": "Code Review OpenCode plugin - structured review with language rules",
+  "main": "index.ts",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@opencode/plugin": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

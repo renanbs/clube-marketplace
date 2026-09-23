@@ -1,0 +1,16 @@
+{
+  "name": "@clube/opencode-plugin",
+  "version": "0.4.0",
+  "description": "Clube OpenCode plugin - workflow, audit & domain expert skills",
+  "main": "index.ts",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@opencode/plugin": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

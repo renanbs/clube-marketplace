@@ -21,8 +21,9 @@ O **Clube AI Marketplace** fornece um modelo de distribuição unificado para sk
 - **Oh My Pi (OMP)** (`.omp-plugin/`)
 - **Cursor** (`.cursor-plugin/`)
 - **Codex / OpenAI Agents** (`.agents/plugins/`)
+- **OpenCode V2** (`.opencode-plugin/` + adaptadores `.opencode/`)
 
-Cada host lê seu catálogo nativo de marketplace a partir da raiz do repositório, consumindo plugins modulares definidos sob `plugins/` (como `plugins/clube`).
+Cada host lê seu catálogo nativo de marketplace a partir da raiz do repositório, consumindo plugins modulares definidos sob `plugins/` (como `plugins/clube`). O OpenCode V2 não tem marketplace nativo — ele consome `opencode.json` além dos adaptadores TypeScript em `.opencode/plugins/`.
 
 ---
 
@@ -34,6 +35,13 @@ clube-marketplace/
 ├── .omp-plugin/marketplace.json        # Catálogo do marketplace para Oh My Pi
 ├── .cursor-plugin/marketplace.json     # Catálogo do marketplace para Cursor
 ├── .agents/plugins/marketplace.json    # Catálogo do marketplace para Codex
+├── .opencode-plugin/marketplace.json   # Catálogo do marketplace para OpenCode V2
+├── opencode.json                       # Configuração do OpenCode V2 (plugins + agentes)
+├── .opencode/
+│   ├── opencode.json                   # Configuração do OpenCode V2 (paths relativos portáveis)
+│   └── plugins/                        # Adaptadores de plugin para OpenCode
+│       ├── clube/index.ts              # Adaptador Clube: 6 skills + 6 comandos
+│       └── code-review/index.ts        # Adaptador code review: 1 skill + 1 comando
 ├── Makefile                            # Alvos operacionais (check, audit, sync, init)
 ├── AGENTS.md                           # Instruções canônicas e Project Profile
 ├── CLAUDE.md                           # Ponteiro -> @AGENTS.md
@@ -56,6 +64,7 @@ clube-marketplace/
         ├── .cursor-plugin/plugin.json
         ├── .codex-plugin/plugin.json
         ├── .omp-plugin/plugin.json
+        ├── .opencode-plugin/plugin.json
         ├── scripts/                    # Scripts de auditoria estática e motor de UI ASCII
         │   ├── ui.py                   # Caixas ASCII, badges, tabelas e barras de saúde
         │   ├── audit-all.py            # Executor unificado de auditoria 360°
@@ -82,7 +91,7 @@ clube-marketplace/
             └── fullstack-performance-resilience/# Recuperação de chunks, cache e tuning
                 └── references/         # Recuperação Vite, headers de borda e índices DB
     └── code-review/                    # Plugin de code review (v0.1.0, versionado à parte)
-        ├── .{claude,cursor,codex,omp}-plugin/plugin.json
+        ├── .{claude,cursor,codex,omp,opencode}-plugin/plugin.json
         ├── commands/review.md          # /code-review:review
         ├── agents/reviewer.md          # Revisor somente leitura (classe critique)
         └── skills/code-review/
@@ -123,6 +132,45 @@ codex plugin marketplace add clubedepontos/clube-marketplace --ref main
 codex plugin install clube --source clube
 codex plugin install code-review --source clube
 ```
+
+### OpenCode V2
+
+O OpenCode V2 não tem marketplace nativo — os plugins são conectados via `opencode.json`.
+Cada adaptador vive em `.opencode/plugins/<plugin>/` com um `package.json` (apontando para
+`@opencode/plugin`); rode `npm install` (ou `bun install`) lá uma vez e depois referencie
+o adaptador no `opencode.json` do seu projeto:
+
+```bash
+# A partir deste repositório (desenvolvimento local)
+cd .opencode/plugins/clube && npm install
+cd ../code-review && npm install
+```
+
+Depois adicione ao `opencode.json` do seu projeto:
+
+```json
+{
+  "plugins": [
+    "/caminho/para/clube-marketplace/.opencode/plugins/clube",
+    "/caminho/para/clube-marketplace/.opencode/plugins/code-review"
+  ],
+  "agents": {
+    "expert-seo": { "mode": "subagent", "system": "/caminho/para/clube-marketplace/plugins/clube/agents/expert-seo.md" },
+    "expert-tracking": { "mode": "subagent", "system": "/caminho/para/clube-marketplace/plugins/clube/agents/expert-tracking.md" },
+    "expert-privacy": { "mode": "subagent", "system": "/caminho/para/clube-marketplace/plugins/clube/agents/expert-privacy.md" },
+    "expert-performance": { "mode": "subagent", "system": "/caminho/para/clube-marketplace/plugins/clube/agents/expert-performance.md" },
+    "clube-auditor": { "mode": "subagent", "system": "/caminho/para/clube-marketplace/plugins/clube/agents/clube-auditor.md" },
+    "reviewer": { "mode": "subagent", "system": "/caminho/para/clube-marketplace/plugins/code-review/agents/reviewer.md" }
+  }
+}
+```
+
+Os sinais são os mesmos em todos os harnesses: skills (`/skill init`, `/skill clube-architecture`, …),
+comandos slash (`/clube:init`, `/clube:audit`, `/clube:audit-seo`, `/code-review:review`, …) e
+subagentes nomeados (`expert-seo`, `reviewer`, …). Os agentes não carregam `model` — herdam o
+modelo da sessão — mantendo o marketplace independente de provedor. Este repositório já entrega
+um `opencode.json` e `.opencode/opencode.json` prontos para uso (paths relativos portáveis,
+resolvidos quando o OpenCode roda dentro do checkout).
 
 ---
 
@@ -219,7 +267,7 @@ make install-cli
 
 O Clube AI Marketplace é regido pelos **5 Pilares Obrigatórios** definidos na skill `clube:clube-architecture`:
 
-1. **Padrão de Plugins Modulares Multi-Harness:** Todos os harnesses de IA (Claude Code, Cursor, Codex, Oh My Pi) consomem plugins modulares a partir de `plugins/<nome>/` através dos catálogos raiz de marketplace.
+1. **Padrão de Plugins Modulares Multi-Harness:** Todos os harnesses de IA (Claude Code, Cursor, Codex, Oh My Pi, OpenCode V2) consomem plugins modulares a partir de `plugins/<nome>/` através dos catálogos raiz de marketplace.
 2. **Arquitetura Híbrida de Auditoria:** Scripts estáticos determinísticos em Python (`plugins/clube/scripts/`) executam verificações de base de forma rápida, persistem o estado estruturado em `.clube/audit-last.json` e alimentam os comandos slash dos LLMs com evidências concretas.
 3. **Contrato de Saída em 4 Fases:** Cada comando, skill e fluxo de IA adere estritamente ao contrato de 4 fases:
    - `### 1. Plan`
@@ -227,4 +275,4 @@ O Clube AI Marketplace é regido pelos **5 Pilares Obrigatórios** definidos na 
    - `### 3. Summary`
    - `### 4. Recommended Actions`
 4. **Persistência de Estado e Runlog Estruturado:** Auditorias automatizadas gravam artefatos estruturados de execução em `.clube/audit-last.json` com renderização visual no terminal (tabelas ASCII, barras de saúde gráfica, badges coloridos).
-5. **Paridade SemVer e Documentação Bilíngue:** Todos os 9 arquivos de manifesto declaram estritamente versões SemVer idênticas (`0.4.0`), enquanto plugins adicionais como o `code-review` têm versão própria, mantida consistente entre seus manifests e entradas de catálogo. Toda a documentação mantém paridade bilíngue completa em Inglês (`README.md`, `CHANGELOG.md`) e Português do Brasil (`README.pt-BR.md`, `CHANGELOG.pt-BR.md`).
+5. **Paridade SemVer e Documentação Bilíngue:** Todos os manifests versionados (`package.json` raiz, 5 catálogos de marketplace, 5 manifests do plugin `clube`) declaram estritamente versões SemVer idênticas (`0.4.0`), enquanto plugins adicionais como o `code-review` têm versão própria, mantida consistente entre seus manifests e entradas de catálogo. Toda a documentação mantém paridade bilíngue completa em Inglês (`README.md`, `CHANGELOG.md`) e Português do Brasil (`README.pt-BR.md`, `CHANGELOG.pt-BR.md`).

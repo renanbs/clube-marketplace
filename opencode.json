@@ -1,0 +1,39 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugins": [
+    "./.opencode/plugins/clube",
+    "./.opencode/plugins/code-review"
+  ],
+  "agents": {
+    "expert-seo": {
+      "description": "Clube agent: Specialist in technical SEO, Generative Engine Optimization (GEO), Schema.org JSON-LD, /llms.txt discovery, OpenGraph tags, and indexing boundaries.",
+      "mode": "subagent",
+      "system": "./plugins/clube/agents/expert-seo.md"
+    },
+    "expert-tracking": {
+      "description": "Clube agent: Specialist in marketing attribution, Meta Pixel & Conversions API (CAPI), GA4, root-domain cookie hygiene, and database acquisition persistence.",
+      "mode": "subagent",
+      "system": "./plugins/clube/agents/expert-tracking.md"
+    },
+    "expert-privacy": {
+      "description": "Clube agent: Specialist in LGPD/GDPR compliance, PII masking, shape logging, Sentry scrubbing, telemetry hygiene, and read-only audit logging.",
+      "mode": "subagent",
+      "system": "./plugins/clube/agents/expert-privacy.md"
+    },
+    "expert-performance": {
+      "description": "Clube agent: Specialist in fullstack performance, SPA chunk recovery, CDN edge caching headers, container cgroups runtime tuning, and database query optimization.",
+      "mode": "subagent",
+      "system": "./plugins/clube/agents/expert-performance.md"
+    },
+    "clube-auditor": {
+      "description": "Clube agent: 360-degree audit coordinator executing deterministic Python detectors, parsing .clube/audit-last.json, and synthesizing 4-phase remediation reports.",
+      "mode": "subagent",
+      "system": "./plugins/clube/agents/clube-auditor.md"
+    },
+    "reviewer": {
+      "description": "Clube agent: Read-only code review agent evaluating diffs for correctness, error handling, performance, security surface, test quality, and conventions, loading language-specific rules (Go, TypeScript, Rust) only when detected.",
+      "mode": "subagent",
+      "system": "./plugins/code-review/agents/reviewer.md"
+    }
+  }
+}

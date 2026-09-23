@@ -5,6 +5,16 @@ All notable changes to the Clube Marketplace will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **OpenCode V2 support:** first-class OpenCode harness distribution.
+  - `.opencode-plugin/marketplace.json` catalog plus per-plugin `.opencode-plugin/plugin.json` manifests (SemVer parity enforced by `make check`).
+  - `.opencode/plugins/clube/index.ts` and `.opencode/plugins/code-review/index.ts` OpenCode plugin adapters registering 7 skills and 7 slash commands (`/clube:init`, `/clube:help`, `/clube:audit`, `/clube:audit-privacy`, `/clube:audit-performance`, `/clube:audit-seo`, `/clube:audit-tracking`, `/code-review:review`). `clube:omp-setup` stays OMP-only.
+  - Root `opencode.json` and `.opencode/opencode.json` wiring the adapters plus 6 named subagents (`expert-seo`, `expert-tracking`, `expert-privacy`, `expert-performance`, `clube-auditor`, `reviewer`) whose `system` resolves to the canonical `plugins/` agent files. Agents omit `model` to inherit the session model (provider-agnostic).
+  - `make check` now audits the OpenCode integration: both configs parse, every catalog plugin ships an adapter `index.ts`, and every agent `system` path resolves.
+- Bilingual docs updated: README/README.pt-BR installation sections, `clube:help`, and `AGENTS.md`.
+
 ## [0.4.0] - 2026-09-23
 
 ### Added
