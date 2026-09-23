@@ -5,7 +5,7 @@ Todas as mudanças notáveis no Clube Marketplace serão documentadas neste arqu
 O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/spec/v2.0.0.html).
 
-## [Não lançado]
+## [0.4.0] - 2026-09-23
 
 ### Adicionado
 - **Plugin `code-review` (`plugins/code-review/`, v0.1.0):** Plugin separado, com versão independente, para code review estruturado.
@@ -18,6 +18,7 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/spec
 - **Validação de versão por plugin:** `make check` valida a versão de cada plugin contra os próprios manifests e contra a entrada dele em cada catálogo, permitindo versões independentes.
 - A paridade SemVer geral agora lê a entrada do `clube` no catálogo pelo nome, e não a primeira entrada, então a ordem dos catálogos deixou de importar.
 - A saída do `make check` mostra cada problema só embaixo do plugin a que pertence.
+- `package.json`, as entradas do `clube` nos catálogos, os 4 manifests do plugin `clube` e o frontmatter das skills verticais sincronizados em `v0.4.0`. O `code-review` sai com a própria versão, `v0.1.0`.
 
 ## [0.3.0] - 2026-09-13
 

@@ -4,7 +4,7 @@
 
 **Marketplace centralizado e multi-harness de IA para skills, agentes, comandos e fluxos de trabalho sob medida para os produtos SaaS do Clube.**
 
-[![Versão](https://img.shields.io/badge/versão-0.3.0-blue.svg)](CHANGELOG.pt-BR.md)
+[![Versão](https://img.shields.io/badge/versão-0.4.0-blue.svg)](CHANGELOG.pt-BR.md)
 [![Licença](https://img.shields.io/badge/licença-MIT-green.svg)](LICENSE)
 [![Padrões](https://img.shields.io/badge/padrões-Keep%20a%20Changelog-orange.svg)](CHANGELOG.pt-BR.md)
 
@@ -51,7 +51,7 @@ clube-marketplace/
 ├── .clube/
 │   └── audit-last.json                 # Runlog estruturado de auditoria e estado persistente
 └── plugins/
-    └── clube/                          # Plugin principal do Clube (v0.3.0)
+    └── clube/                          # Plugin principal do Clube (v0.4.0)
         ├── .claude-plugin/plugin.json
         ├── .cursor-plugin/plugin.json
         ├── .codex-plugin/plugin.json
@@ -227,4 +227,4 @@ O Clube AI Marketplace é regido pelos **5 Pilares Obrigatórios** definidos na 
    - `### 3. Summary`
    - `### 4. Recommended Actions`
 4. **Persistência de Estado e Runlog Estruturado:** Auditorias automatizadas gravam artefatos estruturados de execução em `.clube/audit-last.json` com renderização visual no terminal (tabelas ASCII, barras de saúde gráfica, badges coloridos).
-5. **Paridade SemVer e Documentação Bilíngue:** Todos os 9 arquivos de manifesto declaram estritamente versões SemVer idênticas (`0.3.0`), enquanto plugins adicionais como o `code-review` têm versão própria, mantida consistente entre seus manifests e entradas de catálogo. Toda a documentação mantém paridade bilíngue completa em Inglês (`README.md`, `CHANGELOG.md`) e Português do Brasil (`README.pt-BR.md`, `CHANGELOG.pt-BR.md`).
+5. **Paridade SemVer e Documentação Bilíngue:** Todos os 9 arquivos de manifesto declaram estritamente versões SemVer idênticas (`0.4.0`), enquanto plugins adicionais como o `code-review` têm versão própria, mantida consistente entre seus manifests e entradas de catálogo. Toda a documentação mantém paridade bilíngue completa em Inglês (`README.md`, `CHANGELOG.md`) e Português do Brasil (`README.pt-BR.md`, `CHANGELOG.pt-BR.md`).

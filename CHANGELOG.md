@@ -5,7 +5,7 @@ All notable changes to the Clube Marketplace will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.4.0] - 2026-09-23
 
 ### Added
 - **`code-review` plugin (`plugins/code-review/`, v0.1.0):** A separate, independently versioned plugin for structured code review.
@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Per-plugin version validation:** `make check` validates each plugin's version against its own manifests and its entry in every catalog, so plugins can be versioned independently.
 - Repository-wide SemVer parity now reads the `clube` catalog entry by name instead of the first entry, so catalog order no longer matters.
 - `make check` output lists each problem only under the plugin it belongs to.
+- Synchronized `package.json`, the `clube` catalog entries, the 4 `clube` plugin manifests, and the vertical skill frontmatter to `v0.4.0`. `code-review` ships at its own `v0.1.0`.
 
 ## [0.3.0] - 2026-09-13
 
