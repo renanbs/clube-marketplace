@@ -5,6 +5,45 @@ Todas as mudanças notáveis no Clube Marketplace serão documentadas neste arqu
 O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/spec/v2.0.0.html).
 
+## [Não lançado]
+
+### Adicionado
+- **Plugin `code-review` (`plugins/code-review/`, v0.1.0):** Plugin separado, com versão independente, para code review estruturado.
+  - Comando `/code-review:review` para mudanças staged, branches e pull requests.
+  - Agente `reviewer` somente leitura (classe `critique`) que responde `APPROVE` ou `CHANGES-REQUESTED`.
+  - Skill `code-review` com núcleo independente de linguagem e referências sob demanda para Go, TypeScript e Rust.
+- `code-review` registrado nos quatro catálogos de marketplace da raiz.
+
+### Alterado
+- **Validação de versão por plugin:** `make check` valida a versão de cada plugin contra os próprios manifests e contra a entrada dele em cada catálogo, permitindo versões independentes.
+- A paridade SemVer geral agora lê a entrada do `clube` no catálogo pelo nome, e não a primeira entrada, então a ordem dos catálogos deixou de importar.
+- A saída do `make check` mostra cada problema só embaixo do plugin a que pertence.
+
+## [0.3.0] - 2026-09-13
+
+### Adicionado
+- **CLI em Python (`clube_cli/`):** `bin/clube-config` virou um lançador fino; a lógica dos comandos (`check`, `audit`, `sync`, `init`, `install`) fica num pacote Python testado, usando só a biblioteca padrão em tempo de execução.
+- **Suíte pytest (`tests/`, `make test`):** Cobre os quatro auditores (incluindo falsos positivos calibrados), os cenários de falha do validador, a pontuação por severidade, a detecção de harness e o sync de ponteiros. Roda via `uv`; o `uv.lock` é versionado.
+- **Preflight de dependências (`make doctor`):** Verifica `python3` (versão mínima lida do `pyproject.toml`), `uv`, `pytest`, `make` e `git`. O `init` roda o preflight antes de escrever qualquer arquivo e aborta se faltar uma dependência obrigatória.
+- `make test` falha com uma mensagem acionável quando não há `uv` nem `pytest` disponíveis.
+- **Integridade de links no validador:** `make check` acusa links quebrados para references e references órfãs nas skills.
+
+### Alterado
+- **`make check` agora pode falhar:** O exit code vem da quantidade de problemas encontrados. Antes ele saía `0` em qualquer estado.
+- Skills verticais passam a exigir `references/` por padrão, com lista de isenção (`init`, `clube-architecture`), então uma skill nova não escapa mais da checagem.
+- O frontmatter dos agentes é lido só dentro do bloco `---`, e os campos faltantes são nomeados.
+- **Fonte única de versão:** O alvo da paridade SemVer vem do `package.json`, e `clube_cli.__version__` é derivado dele em vez de ficar fixo no código.
+- **Constituição de arquitetura:** Novas regras 2.3 (Gates Must Be Able To Fail) e 5.1 (Single Source of Truth), esclarecimento de que a regra de só usar stdlib vale em tempo de execução, e novos anti-padrões.
+- Os 9 manifests e o frontmatter das skills verticais sincronizados em `v0.3.0`.
+
+### Corrigido
+- Entradas do runlog são serializadas com `json.dumps`, então `details` com aspas não geram mais JSON inválido.
+- A detecção de harness pelo processo pai tem limite de profundidade e não entra mais em loop quando o `ps` falha.
+- Um profile corrompido ou ausente cai no padrão em vez de gerar erro.
+
+### Removido
+- `scripts/*.sh` (`lib-harness.sh`, `lib-runlog.sh`, `sync-harness-configs.sh`), substituídos pelo CLI em Python.
+
 ## [0.2.0] - 2026-09-13
 
 ### Adicionado

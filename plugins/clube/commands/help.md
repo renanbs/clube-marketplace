@@ -41,6 +41,10 @@ Skills follow the **Progressive Disclosure Architecture**, featuring lean activa
 | `clube:data-privacy-observability` | `pii-masking-shape.md`, `sentry-observability-scrubbing.md`, `compliance-retention.md` | LGPD/GDPR compliance, PII masking, shape logging ("log the shape, not the data"), Sentry `beforeSend` scrubbing, and retention policies. |
 | `clube:fullstack-performance-resilience` | `chunk-recovery.md`, `caching-edge-headers.md`, `runtime-tuning.md`, `db-indexing-queries.md` | Deploy resilience, SPA chunk recovery (`vite:preloadError`), CDN cache headers (`immutable`), container tuning (`automaxprocs`), and database query indexing. |
 
+## Other Plugins in This Marketplace
+
+- **`code-review`** (versioned independently) — `/code-review:review` runs a structured, read-only code review of staged changes, a branch, or a pull request, with language-specific rules for Go, TypeScript, and Rust. Install it separately (e.g. `code-review@clube`).
+
 ## Core Principles
 
 1. **Single Source of Truth (`AGENTS.md`):** Every project declares its Project Profile inside `AGENTS.md` and imports it into `CLAUDE.md`, `GEMINI.md`, and `.cursorrules` using `@AGENTS.md`.

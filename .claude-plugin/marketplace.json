@@ -13,6 +13,12 @@
       "version": "0.3.0",
       "source": "./plugins/clube",
       "description": "Clube dev workflows, fullstack performance, SaaS SEO/GEO, marketing attribution, privacy observability, and guided init."
+    },
+    {
+      "name": "code-review",
+      "version": "0.1.0",
+      "source": "./plugins/code-review",
+      "description": "Structured code review with a language-agnostic core and on-demand Go, TypeScript, and Rust rules."
     }
   ]
 }

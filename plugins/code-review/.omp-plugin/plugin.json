@@ -1,0 +1,23 @@
+{
+  "name": "code-review",
+  "description": "Structured code review with a language-agnostic core and on-demand Go, TypeScript, and Rust rules.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Clube"
+  },
+  "repository": "https://github.com/clube/clube-marketplace",
+  "license": "MIT",
+  "keywords": [
+    "code-review",
+    "review",
+    "quality",
+    "go",
+    "typescript",
+    "rust",
+    "skills",
+    "agents"
+  ],
+  "skills": "./skills/",
+  "commands": "./commands/",
+  "agents": "./agents/"
+}

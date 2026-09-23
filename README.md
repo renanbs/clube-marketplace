@@ -4,7 +4,7 @@
 
 **Centralized multi-harness AI marketplace for skills, agents, commands, and workflows tailored for Clube SaaS products.**
 
-[![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.3.0-blue.svg)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Standards](https://img.shields.io/badge/standards-Keep%20a%20Changelog-orange.svg)](CHANGELOG.md)
 
@@ -30,10 +30,10 @@ Each host reads its native marketplace catalog from the repository root, consumi
 
 ```
 clube-marketplace/
-├── .claude-plugin/marketplace.json     # Claude Code marketplace catalog (v0.2.0)
-├── .omp-plugin/marketplace.json        # Oh My Pi marketplace catalog (v0.2.0)
-├── .cursor-plugin/marketplace.json     # Cursor marketplace catalog (v0.2.0)
-├── .agents/plugins/marketplace.json    # Codex marketplace catalog (v0.2.0)
+├── .claude-plugin/marketplace.json     # Claude Code marketplace catalog
+├── .omp-plugin/marketplace.json        # Oh My Pi marketplace catalog
+├── .cursor-plugin/marketplace.json     # Cursor marketplace catalog
+├── .agents/plugins/marketplace.json    # Codex marketplace catalog
 ├── Makefile                            # Operational targets (check, audit, sync, init)
 ├── AGENTS.md                           # Canonical instructions & Project Profile
 ├── CLAUDE.md                           # Pointer -> @AGENTS.md
@@ -51,7 +51,7 @@ clube-marketplace/
 ├── .clube/
 │   └── audit-last.json                 # Structured audit runlog & persistent state
 └── plugins/
-    └── clube/                          # Core Clube plugin (v0.2.0)
+    └── clube/                          # Core Clube plugin (v0.3.0)
         ├── .claude-plugin/plugin.json
         ├── .cursor-plugin/plugin.json
         ├── .codex-plugin/plugin.json
@@ -81,6 +81,13 @@ clube-marketplace/
             │   └── references/         # Masking helpers, Sentry scrubbing & DDLs
             └── fullstack-performance-resilience/# Chunk recovery, caching & tuning
                 └── references/         # Vite recovery, edge headers & DB indexing
+    └── code-review/                    # Code review plugin (v0.1.0, versioned independently)
+        ├── .{claude,cursor,codex,omp}-plugin/plugin.json
+        ├── commands/review.md          # /code-review:review
+        ├── agents/reviewer.md          # Read-only reviewer (critique class)
+        └── skills/code-review/
+            ├── SKILL.md                # Core checklist, severity scale & verdict
+            └── references/             # go.md, typescript.md, rust.md (loaded on demand)
 ```
 
 ---
@@ -91,12 +98,14 @@ clube-marketplace/
 ```bash
 /plugin marketplace add git@github.com:clubedepontos/clube-marketplace.git
 /plugin install clube@clube
+/plugin install code-review@clube
 ```
 
 ### Oh My Pi (OMP)
 ```bash
 /marketplace add https://github.com/clubedepontos/clube-marketplace
 /marketplace install --scope project clube@clube
+/marketplace install --scope project code-review@clube
 ```
 *Note: If using custom agents on OMP, run `/clube:omp-setup` once to configure model overrides.*
 
@@ -105,12 +114,14 @@ Add as a Team marketplace via **Settings → Plugins**, or symlink for local dev
 ```bash
 mkdir -p ~/.cursor/plugins/local
 ln -s "$(pwd)/plugins/clube" ~/.cursor/plugins/local/clube
+ln -s "$(pwd)/plugins/code-review" ~/.cursor/plugins/local/code-review
 ```
 
 ### Codex
 ```bash
 codex plugin marketplace add clubedepontos/clube-marketplace --ref main
 codex plugin install clube --source clube
+codex plugin install code-review --source clube
 ```
 
 ---
@@ -156,6 +167,16 @@ All vertical SaaS skills follow the **Progressive Disclosure Architecture**, fea
 | `/clube:omp-setup` | (OMP only) Configures model overrides for plugin agents to ensure seamless subagent dispatch. |
 | `/clube:help` (or `/help`) | Displays complete overview of commands, skills, and core engineering principles. |
 
+## Code Review Plugin (`plugins/code-review`)
+
+A separate plugin, versioned independently from `clube` (currently `v0.1.0`), for structured, evidence-based code review in any project.
+
+| Component | Name | Focus |
+| :--- | :--- | :--- |
+| Command | `/code-review:review` | Reviews staged changes (falling back to the current branch), a branch (`<branch>`), or a pull request (`#<number>`). |
+| Agent | `reviewer` | Read-only, `critique` class. Loads only the language rules present in the diff, applies the target project's `AGENTS.md` conventions, and returns `APPROVE` or `CHANGES-REQUESTED`. |
+| Skill | `code-review:code-review` | Core checklist (correctness, error handling, naming, performance, security, tests, API contracts, conventions) and severity scale, with `references/go.md`, `references/typescript.md`, and `references/rust.md`. |
+
 ---
 
 ## Operational CLI & Makefile Commands
@@ -166,6 +187,14 @@ The repository includes a dedicated CLI helper (`bin/clube-config`) and `Makefil
 # Audit active harness detection, marketplace catalogs, and plugin integrity
 make check
 ./bin/clube-config check
+
+# Run the Python test suite (pytest via uv)
+make test
+./bin/clube-config test
+
+# Verify required and optional toolchain dependencies (python3, uv, pytest, make, git)
+make doctor
+./bin/clube-config doctor
 
 # Run deterministic 360° SaaS production readiness audit
 make audit
@@ -198,4 +227,4 @@ The Clube AI Marketplace is governed by the **5 Mandatory Pillars** defined in `
    - `### 3. Summary`
    - `### 4. Recommended Actions`
 4. **Structured Runlog & State Persistence:** Automated audits record structured execution artifacts in `.clube/audit-last.json` with visual terminal rendering (ASCII tables, health bars, badges).
-5. **SemVer Parity & Bilingual Documentation:** All 9 manifest files strictly declare identical SemVer versions (`0.2.0`), accompanied by complete bilingual documentation parity in English (`README.md`, `CHANGELOG.md`) and Brazilian Portuguese (`README.pt-BR.md`, `CHANGELOG.pt-BR.md`).
+5. **SemVer Parity & Bilingual Documentation:** All 9 manifest files strictly declare identical SemVer versions (`0.3.0`), while additional plugins such as `code-review` carry their own version, kept consistent across their manifests and catalog entries. All documentation keeps complete bilingual parity in English (`README.md`, `CHANGELOG.md`) and Brazilian Portuguese (`README.pt-BR.md`, `CHANGELOG.pt-BR.md`).

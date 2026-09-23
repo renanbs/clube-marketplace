@@ -11,8 +11,11 @@ from __future__ import annotations
 import json
 import os
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
+from typing import Any
+
+PRIMARY_PLUGIN = "clube"
 
 MARKET_MANIFESTS = (
     ".claude-plugin/marketplace.json",
@@ -29,7 +32,8 @@ PLUGIN_MANIFESTS = (
 )
 
 # Manifests that must all agree on one version. (path, kind) — "market" catalogs carry
-# the version inside plugins[0] rather than at the top level.
+# the version inside the PRIMARY_PLUGIN entry rather than at the top level. Other
+# plugins are versioned independently and validated by check_plugin_version.
 VERSIONED_MANIFESTS = (
     ("package.json", "root"),
     (".claude-plugin/marketplace.json", "market"),
@@ -56,6 +60,7 @@ REFERENCE_LINK_RE = re.compile(r"\((references/[^)]+\.md)\)")
 class Problem:
     kind: str
     message: str
+    plugin: str | None = None
 
 
 def read_json(path):
@@ -167,11 +172,11 @@ def manifest_version(path, kind):
     data = read_json(path)
     if kind in ("root", "plugin"):
         return data.get("version")
-    plugins = data.get("plugins")
-    if isinstance(plugins, list) and plugins and isinstance(plugins[0], dict):
-        version = plugins[0].get("version")
-        if version:
-            return version
+    for entry in data.get("plugins") or []:
+        if isinstance(entry, dict) and entry.get("name") == PRIMARY_PLUGIN:
+            version = entry.get("version")
+            if version:
+                return version
     return data.get("version")
 
 
@@ -216,6 +221,64 @@ def check_semver_parity(repo_root, target_version=None):
     return (target_version, matched, len(VERSIONED_MANIFESTS), problems)
 
 
+def catalog_entry_version(catalog_path, plugin_name):
+    """Version declared for `plugin_name` in a marketplace catalog, or None if unlisted."""
+    for entry in read_json(catalog_path).get("plugins") or []:
+        if isinstance(entry, dict) and entry.get("name") == plugin_name:
+            return entry.get("version")
+    return None
+
+
+def check_plugin_version(repo_root, plugin_dir):
+    """Each plugin is versioned independently: its own manifests must agree with each
+    other and with its entry in every marketplace catalog.
+
+    Returns (version, [Problem]).
+    """
+    repo_root = Path(repo_root)
+    plugin_dir = Path(plugin_dir)
+    name = plugin_dir.name
+    problems = []
+
+    declared = {}
+    for manifest in PLUGIN_MANIFESTS:
+        path = plugin_dir / manifest
+        if not path.is_file():
+            continue
+        try:
+            declared[manifest] = read_json(path).get("version")
+        except Exception as exc:
+            problems.append(Problem("plugin-version", f"{name}/{manifest} ({exc})", name))
+
+    versions = sorted({v for v in declared.values() if v}, key=str)
+    if not versions:
+        problems.append(Problem("plugin-version", f"{name}: no version declared in plugin manifests", name))
+        return None, problems
+    if len(versions) > 1:
+        detail = ", ".join(f"{m}={v}" for m, v in declared.items())
+        problems.append(Problem("plugin-version", f"{name}: plugin manifests disagree ({detail})", name))
+        return None, problems
+
+    version = versions[0]
+    for catalog in MARKET_MANIFESTS:
+        path = repo_root / catalog
+        if not path.is_file():
+            continue
+        try:
+            listed = catalog_entry_version(path, name)
+        except Exception as exc:
+            problems.append(Problem("plugin-version", f"{catalog} ({exc})", name))
+            continue
+        if listed is None:
+            problems.append(Problem("plugin-version", f"{name}: not listed in {catalog}", name))
+        elif listed != version:
+            problems.append(
+                Problem("plugin-version", f"{name}: {catalog} lists '{listed}', manifests declare '{version}'", name)
+            )
+
+    return version, problems
+
+
 def check_repository(repo_root):
     """Run every structural check. Returns (report, [Problem])."""
     repo_root = Path(repo_root)
@@ -241,14 +304,16 @@ def check_repository(repo_root):
             problems.append(Problem("plugins", "No plugins found in plugins/ directory"))
 
         for plugin in plugin_dirs:
-            entry = {
+            entry: dict[str, Any] = {
                 "manifests": {m: (plugin / m).is_file() for m in PLUGIN_MANIFESTS},
+                "version": None,
                 "skills": 0,
                 "references": 0,
                 "agents": 0,
                 "invalid_agents": 0,
                 "commands": 0,
             }
+            plugin_problems = []
 
             skills_dir = plugin / "skills"
             if skills_dir.is_dir():
@@ -258,9 +323,9 @@ def check_repository(repo_root):
                         refs = skill / "references"
                         if refs.is_dir():
                             entry["references"] += len(list(refs.glob("*.md")))
-                        problems.extend(check_skill(skill))
+                        plugin_problems.extend(check_skill(skill))
                     elif skill.is_file() and skill.suffix == ".md":
-                        problems.append(
+                        plugin_problems.append(
                             Problem(
                                 "skill",
                                 f"Non-standard flat skill: {skill.name} (expected: skills/<name>/SKILL.md)",
@@ -273,7 +338,7 @@ def check_repository(repo_root):
                     agent_problems = check_agent(agent)
                     if agent_problems:
                         entry["invalid_agents"] += 1
-                        problems.extend(agent_problems)
+                        plugin_problems.extend(agent_problems)
                     else:
                         entry["agents"] += 1
 
@@ -281,6 +346,10 @@ def check_repository(repo_root):
             if commands_dir.is_dir():
                 entry["commands"] = len(list(commands_dir.glob("*.md")))
 
+            entry["version"], version_problems = check_plugin_version(repo_root, plugin)
+            plugin_problems.extend(version_problems)
+
+            problems.extend(replace(p, plugin=plugin.name) for p in plugin_problems)
             report["plugins"][plugin.name] = entry
 
     target, matched, total, semver_problems = check_semver_parity(repo_root)
