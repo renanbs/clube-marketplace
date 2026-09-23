@@ -40,7 +40,7 @@ clube-marketplace/
 ├── .opencode/
 │   ├── opencode.json                   # OpenCode V2 config (portable relative paths)
 │   └── plugins/                        # OpenCode plugin adapters
-│       ├── clube/index.ts              # Clube adapter: 6 skills + 6 commands
+│       ├── clube/index.ts              # Clube adapter: 7 skills + 6 commands
 │       └── code-review/index.ts        # Code review adapter: 1 skill + 1 command
 ├── Makefile                            # Operational targets (check, audit, sync, init)
 ├── AGENTS.md                           # Canonical instructions & Project Profile
