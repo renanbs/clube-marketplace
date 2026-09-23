@@ -5,7 +5,7 @@ Todas as mudanças notáveis no Clube Marketplace serão documentadas neste arqu
 O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/spec/v2.0.0.html).
 
-## [Não lançado]
+## [0.6.0] - 2026-09-23
 
 ### Adicionado
 - **Skill `release-marketplace`:** cerimônia de release estruturada bilíngue (EN + pt-BR) para o Clube Marketplace. Cobre o bump SemVer em todos os manifests versionados, changelogs bilíngues, merge via merge-commit, tag anotada e Release no GitHub com notas de changelog bilíngues — ancorada por `references/release-procedure.md`, `references/semver-manifests.md` e `references/github-release.md`.
