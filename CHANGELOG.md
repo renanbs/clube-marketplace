@@ -5,6 +5,17 @@ All notable changes to the Clube Marketplace will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-09-27
+
+### Added
+- **`typesafe-ai` plugin (`plugins/typesafe-ai/`, v0.1.0):** TypeSafe AI integration for the **Jev** System 1 decision engine.
+  - **Skill `typesafe-jev`:** System 1 vs System 2 offloading, calibrated confidence gating, and token optimization across Python, TypeScript, Go, and Rust.
+  - **6 technical reference guides:** `system1-architecture.md`, `confidence-gating.md`, `python-pydantic.md` (Pydantic AI / `TypeSafeModel`), `typescript-sdk.md` (Zod schemas), `go-integration.md` (Ports & Adapters, HTTP/gRPC), and `rust-integration.md` (Tokio, `serde` algebraic enums).
+  - **Specialist Agent `expert-jev`:** System 1 decision architecture specialist designing strict typed schemas and calibrated confidence thresholds.
+  - **Slash Command `/typesafe-ai:optimize`:** 4-phase audit command inspecting codebases for expensive LLM calls that can be replaced with Jev to drastically reduce token costs and drop latency to sub-20ms.
+  - **Multi-harness support:** Manifests for Claude Code, Cursor, Codex, Oh My Pi, and OpenCode V2 adapter (`.opencode/plugins/typesafe-ai/`).
+- Synchronized `package.json`, the `clube` catalog entries, the 5 `clube` plugin manifests, and the vertical skill frontmatter to `v0.7.0`. `typesafe-ai` and `code-review` ship at their own `v0.1.0`.
+
 ## [0.6.0] - 2026-09-23
 
 ### Added
