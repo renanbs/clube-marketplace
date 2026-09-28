@@ -19,6 +19,12 @@
       "version": "0.1.0",
       "source": "./plugins/code-review",
       "description": "Structured code review with a language-agnostic core and on-demand Go, TypeScript, and Rust rules."
+    },
+    {
+      "name": "typesafe-ai",
+      "version": "0.1.0",
+      "source": "./plugins/typesafe-ai",
+      "description": "TypeSafe AI integration for Jev System 1 decision engine, calibrated confidence gating, and token optimization."
     }
   ]
 }

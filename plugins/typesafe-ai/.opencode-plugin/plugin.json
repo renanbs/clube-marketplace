@@ -1,0 +1,24 @@
+{
+  "name": "typesafe-ai",
+  "version": "0.1.0",
+  "description": "TypeSafe AI integration for Jev System 1 decision engine, calibrated confidence gating, and token optimization",
+  "author": {
+    "name": "Clube"
+  },
+  "repository": "https://github.com/clube/clube-marketplace",
+  "license": "MIT",
+  "keywords": [
+    "typesafe-ai",
+    "jev",
+    "system-1",
+    "token-optimization",
+    "confidence-gating",
+    "python",
+    "typescript",
+    "go",
+    "rust"
+  ],
+  "opencode": {
+    "plugin": "./.opencode/plugins/typesafe-ai/index.ts"
+  }
+}

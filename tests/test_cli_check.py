@@ -415,6 +415,13 @@ def test_second_plugin_requires_its_own_adapter(tmp_path):
                for p in problems)
 
 
+def test_real_repository_includes_typesafe_ai_plugin():
+    """The repository must register the typesafe-ai plugin with 0.1.0 version."""
+    repo_root = cli_repo_root()
+    report, problems = check.check_repository(repo_root)
+    assert "typesafe-ai" in report["plugins"], f"typesafe-ai not found in report plugins: {report['plugins'].keys()}"
+    assert report["plugins"]["typesafe-ai"]["version"] == "0.1.0"
+
 def cli_repo_root():
     from pathlib import Path
 
