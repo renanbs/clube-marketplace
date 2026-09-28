@@ -88,17 +88,16 @@ If the project requires a relational database:
 
 1. **DETECT:**
    - Check for installed secret management utilities (`which secret-tool pass keyctl`).
-   - Probe if `typesafe-ai` credentials exist:
+   - Probe if `typesafe` credentials exist:
      ```bash
-     secret-tool lookup service typesafe-ai 2>/dev/null || pass show typesafe-ai/api-key 2>/dev/null
+     secret-tool lookup service typesafe account default 2>/dev/null || secret-tool lookup service typesafe-ai 2>/dev/null || pass show typesafe/api-key 2>/dev/null
      ```
 2. **REPORT:**
    - Report whether Linux Keyring is available and whether `TYPESAFE_API_KEY` is present.
 3. **OFFER:**
    - If the project leverages AI decision engines (`typesafe-ai`) and credentials are missing:
-     - Guide user to securely store credentials via `secret-tool store --label="TypeSafe AI API Key" service typesafe-ai key api_key` (or detected alternative).
+     - Guide user to securely store credentials via `secret-tool store --label="TypeSafe API Key" service typesafe account default` (or detected alternative).
      - Never persist plain-text API keys to project files or commits.
-
 ---
 
 

@@ -27,20 +27,20 @@ To fix this cleanly without touching shared agent definitions, configure OMP's n
      1. `secret-tool` (freedesktop Secret Service API / GNOME Keyring / KWallet)
      2. `pass` (password-store / GPG)
      3. `keyctl` (Linux kernel keyring)
-   - Probe if `typesafe-ai` credentials exist:
+   - Probe if `typesafe` credentials exist:
      ```bash
-     # secret-tool (preferred)
-     secret-tool lookup service typesafe-ai
+     # secret-tool (preferred: service typesafe account default)
+     secret-tool lookup service typesafe account default 2>/dev/null || secret-tool lookup service typesafe-ai 2>/dev/null
      # pass fallback
-     pass show typesafe-ai/api-key 2>/dev/null
+     pass show typesafe/api-key 2>/dev/null || pass show typesafe-ai/api-key 2>/dev/null
      ```
    - If missing, guide developer to securely store the key:
      ```bash
      # For secret-tool:
-     secret-tool store --label="TypeSafe AI API Key" service typesafe-ai key api_key
+     secret-tool store --label="TypeSafe API Key" service typesafe account default
      ```
    - Instruct how to export to the session if needed:
      ```bash
-     export TYPESAFE_API_KEY=$(secret-tool lookup service typesafe-ai)
+     export TYPESAFE_API_KEY=$(secret-tool lookup service typesafe account default 2>/dev/null || secret-tool lookup service typesafe-ai 2>/dev/null)
      ```
 6. Instruct the user to restart the session or run `/reload-plugins` to apply changes.

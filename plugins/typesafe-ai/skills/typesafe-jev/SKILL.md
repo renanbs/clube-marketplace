@@ -43,10 +43,10 @@ Every Jev judgment returns a calibrated confidence score (`0.0` to `1.0`). Alway
 Never commit or hardcode raw API keys. Under Linux, retrieve the API key dynamically from the system keyring:
 ```bash
 # Using secret-tool (preferred):
-export TYPESAFE_API_KEY=$(secret-tool lookup service typesafe-ai)
+export TYPESAFE_API_KEY=$(secret-tool lookup service typesafe account default 2>/dev/null || secret-tool lookup service typesafe-ai 2>/dev/null)
 
 # Using pass fallback:
-export TYPESAFE_API_KEY=$(pass show typesafe-ai/api-key 2>/dev/null)
+export TYPESAFE_API_KEY=$(pass show typesafe/api-key 2>/dev/null || pass show typesafe-ai/api-key 2>/dev/null)
 ```
 Run `/clube:omp-setup` or `/clube:init` to preflight and store credentials in the keyring.
 
