@@ -4,7 +4,7 @@
 
 **Centralized multi-harness AI marketplace for skills, agents, commands, and workflows tailored for Clube SaaS products.**
 
-[![Version](https://img.shields.io/badge/version-0.7.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.7.1-blue.svg)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Standards](https://img.shields.io/badge/standards-Keep%20a%20Changelog-orange.svg)](CHANGELOG.md)
 
@@ -60,7 +60,7 @@ clube-marketplace/
 ├── .clube/
 │   └── audit-last.json                 # Structured audit runlog & persistent state
 └── plugins/
-    └── clube/                          # Core Clube plugin (v0.7.0)
+    └── clube/                          # Core Clube plugin (v0.7.1)
         ├── .claude-plugin/plugin.json
         ├── .cursor-plugin/plugin.json
         ├── .codex-plugin/plugin.json

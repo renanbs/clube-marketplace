@@ -5,6 +5,14 @@ Todas as mudanças notáveis no Clube Marketplace serão documentadas neste arqu
 O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/spec/v2.0.0.html).
 
+## [0.7.1] - 2026-09-27
+
+### Adicionado
+- **Pré-validação de credenciais via Linux Keyring (`secret-tool`):** Integração do gerenciamento seguro de chaves ao `/clube:omp-setup`, `clube:init` (Passo 5) e à skill `typesafe-jev`.
+  - Detecta ferramentas de chave do sistema por ordem de preferência: `secret-tool` (FreeDesktop Secret Service / GNOME Keyring / KWallet), `pass` (password-store / GPG) e `keyctl` (kernel keyring).
+  - Orienta o desenvolvedor a armazenar e consultar a `TYPESAFE_API_KEY` de forma segura, sem exposição de chaves em texto plano ou commits.
+- `package.json`, as entradas do `clube` nos catálogos, os 5 manifests do plugin `clube` e o frontmatter das skills verticais sincronizados em `v0.7.1`. `typesafe-ai` e `code-review` permanecem em suas versões próprias `v0.1.0`.
+
 ## [0.7.0] - 2026-09-27
 
 ### Adicionado
