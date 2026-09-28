@@ -5,6 +5,12 @@ Todas as mudanças notáveis no Clube Marketplace serão documentadas neste arqu
 O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/spec/v2.0.0.html).
 
+## [0.7.2] - 2026-09-27
+
+### Corrigido
+- **Alinhamento de atributos do Linux Keyring:** Alinhamento dos parâmetros de consulta do secret-tool com `service typesafe account default` no `/clube:omp-setup`, `clube:init` e na skill `typesafe-jev`.
+- `package.json`, as entradas do `clube` nos catálogos, os 5 manifests do plugin `clube` e o frontmatter das skills verticais sincronizados em `v0.7.2`. `typesafe-ai` e `code-review` permanecem em suas versões próprias `v0.1.0`.
+
 ## [0.7.1] - 2026-09-27
 
 ### Adicionado
