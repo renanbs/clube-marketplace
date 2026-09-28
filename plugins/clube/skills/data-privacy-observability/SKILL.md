@@ -6,7 +6,7 @@ description: |
   Activate this skill whenever writing logs, configuring Sentry/tracing, handling PII, or auditing retention.
 license: Apache-2.0
 metadata:
-  version: v0.7.2
+  version: v0.7.3
   author: clubedepontos
 ---
 
