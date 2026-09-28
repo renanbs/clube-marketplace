@@ -84,15 +84,32 @@ If the project requires a relational database:
 2. **OFFER:** Configure persistent project notes under `.specs/` or link to an existing vault.
 
 ---
+## Step 5 — AI Credentials Preflight (Linux Keyring / TypeSafe Jev)
 
-## Step 5 — Runtime & Toolchain Validation
+1. **DETECT:**
+   - Check for installed secret management utilities (`which secret-tool pass keyctl`).
+   - Probe if `typesafe-ai` credentials exist:
+     ```bash
+     secret-tool lookup service typesafe-ai 2>/dev/null || pass show typesafe-ai/api-key 2>/dev/null
+     ```
+2. **REPORT:**
+   - Report whether Linux Keyring is available and whether `TYPESAFE_API_KEY` is present.
+3. **OFFER:**
+   - If the project leverages AI decision engines (`typesafe-ai`) and credentials are missing:
+     - Guide user to securely store credentials via `secret-tool store --label="TypeSafe AI API Key" service typesafe-ai key api_key` (or detected alternative).
+     - Never persist plain-text API keys to project files or commits.
+
+---
+
+
+## Step 6 — Runtime & Toolchain Validation
 
 1. Run version checks for all detected runtimes (`go version`, `python3 --version`, `node -v`, `pnpm -v`, `docker -v`).
 2. Report missing or outdated toolchains required by the project's CI commands.
 
 ---
 
-## Step 6 — Summary & Hand-off
+## Step 7 — Summary & Hand-off
 
 Print the final status using the standardized 4-phase format:
 - `### 1. Plan`
