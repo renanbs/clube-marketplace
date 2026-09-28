@@ -41,7 +41,8 @@ clube-marketplace/
 │   ├── opencode.json                   # OpenCode V2 config (portable relative paths)
 │   └── plugins/                        # OpenCode plugin adapters
 │       ├── clube/index.ts              # Clube adapter: 7 skills + 6 commands
-│       └── code-review/index.ts        # Code review adapter: 1 skill + 1 command
+│       ├── code-review/index.ts        # Code review adapter: 1 skill + 1 command
+│       └── typesafe-ai/index.ts        # TypeSafe AI adapter: 1 skill + 1 command
 ├── Makefile                            # Operational targets (check, audit, sync, init)
 ├── AGENTS.md                           # Canonical instructions & Project Profile
 ├── CLAUDE.md                           # Pointer -> @AGENTS.md
@@ -97,6 +98,13 @@ clube-marketplace/
         └── skills/code-review/
             ├── SKILL.md                # Core checklist, severity scale & verdict
             └── references/             # go.md, typescript.md, rust.md (loaded on demand)
+    └── typesafe-ai/                    # TypeSafe AI plugin (v0.1.0, versioned independently)
+        ├── .{claude,cursor,codex,omp,opencode}-plugin/plugin.json
+        ├── commands/optimize.md        # /typesafe-ai:optimize
+        ├── agents/expert-jev.md        # System 1 decision & token optimization specialist
+        └── skills/typesafe-jev/
+            ├── SKILL.md                # System 1 offloading & calibrated confidence gating
+            └── references/             # python, typescript, go, rust integrations & architecture
 ```
 
 ---
@@ -108,6 +116,7 @@ clube-marketplace/
 /plugin marketplace add git@github.com:clubedepontos/clube-marketplace.git
 /plugin install clube@clube
 /plugin install code-review@clube
+/plugin install typesafe-ai@clube
 ```
 
 ### Oh My Pi (OMP)
@@ -115,6 +124,7 @@ clube-marketplace/
 /marketplace add https://github.com/clubedepontos/clube-marketplace
 /marketplace install --scope project clube@clube
 /marketplace install --scope project code-review@clube
+/marketplace install --scope project typesafe-ai@clube
 ```
 *Note: If using custom agents on OMP, run `/clube:omp-setup` once to configure model overrides.*
 
@@ -124,6 +134,7 @@ Add as a Team marketplace via **Settings → Plugins**, or symlink for local dev
 mkdir -p ~/.cursor/plugins/local
 ln -s "$(pwd)/plugins/clube" ~/.cursor/plugins/local/clube
 ln -s "$(pwd)/plugins/code-review" ~/.cursor/plugins/local/code-review
+ln -s "$(pwd)/plugins/typesafe-ai" ~/.cursor/plugins/local/typesafe-ai
 ```
 
 ### Codex
@@ -131,6 +142,7 @@ ln -s "$(pwd)/plugins/code-review" ~/.cursor/plugins/local/code-review
 codex plugin marketplace add clubedepontos/clube-marketplace --ref main
 codex plugin install clube --source clube
 codex plugin install code-review --source clube
+codex plugin install typesafe-ai --source clube
 ```
 
 ### OpenCode V2
@@ -144,6 +156,7 @@ then reference the adapter from your project's `opencode.json`:
 # From this repository (local development)
 cd .opencode/plugins/clube && npm install
 cd ../code-review && npm install
+cd ../typesafe-ai && npm install
 ```
 
 Then add to your project's `opencode.json`:
@@ -152,7 +165,8 @@ Then add to your project's `opencode.json`:
 {
   "plugins": [
     "/path/to/clube-marketplace/.opencode/plugins/clube",
-    "/path/to/clube-marketplace/.opencode/plugins/code-review"
+    "/path/to/clube-marketplace/.opencode/plugins/code-review",
+    "/path/to/clube-marketplace/.opencode/plugins/typesafe-ai"
   ],
   "agents": {
     "expert-seo": { "mode": "subagent", "system": "/path/to/clube-marketplace/plugins/clube/agents/expert-seo.md" },
@@ -160,7 +174,8 @@ Then add to your project's `opencode.json`:
     "expert-privacy": { "mode": "subagent", "system": "/path/to/clube-marketplace/plugins/clube/agents/expert-privacy.md" },
     "expert-performance": { "mode": "subagent", "system": "/path/to/clube-marketplace/plugins/clube/agents/expert-performance.md" },
     "clube-auditor": { "mode": "subagent", "system": "/path/to/clube-marketplace/plugins/clube/agents/clube-auditor.md" },
-    "reviewer": { "mode": "subagent", "system": "/path/to/clube-marketplace/plugins/code-review/agents/reviewer.md" }
+    "reviewer": { "mode": "subagent", "system": "/path/to/clube-marketplace/plugins/code-review/agents/reviewer.md" },
+    "expert-jev": { "mode": "subagent", "system": "/path/to/clube-marketplace/plugins/typesafe-ai/agents/expert-jev.md" }
   }
 }
 ```
@@ -224,6 +239,16 @@ A separate plugin, versioned independently from `clube` (currently `v0.1.0`), fo
 | Command | `/code-review:review` | Reviews staged changes (falling back to the current branch), a branch (`<branch>`), or a pull request (`#<number>`). |
 | Agent | `reviewer` | Read-only, `critique` class. Loads only the language rules present in the diff, applies the target project's `AGENTS.md` conventions, and returns `APPROVE` or `CHANGES-REQUESTED`. |
 | Skill | `code-review:code-review` | Core checklist (correctness, error handling, naming, performance, security, tests, API contracts, conventions) and severity scale, with `references/go.md`, `references/typescript.md`, and `references/rust.md`. |
+
+## TypeSafe AI Plugin (`plugins/typesafe-ai`)
+
+A dedicated plugin (v0.1.0) integrating TypeSafe AI's **Jev** System 1 decision engine to eliminate LLM token waste, enforce calibrated confidence gating, and accelerate decisions down to sub-20ms latency.
+
+| Component | Name | Focus |
+| :--- | :--- | :--- |
+| Command | `/typesafe-ai:optimize` | Scans codebase for expensive LLM calls (classification, triage, structured JSON) and generates copy-pasteable Jev replacements with token savings estimates. |
+| Agent | `expert-jev` | System 1 decision specialist designing strict typed schemas (Pydantic, Zod, Go, Serde) and calibrated confidence thresholds. |
+| Skill | `typesafe-ai:typesafe-jev` | Engineering discipline for offloading generative LLMs to Jev, with deep technical references for Python, TypeScript, Go, and Rust. |
 
 ---
 
