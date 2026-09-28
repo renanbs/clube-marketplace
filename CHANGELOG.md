@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **TypeSafe AI Hotspot Detector:** Added deterministic Python 3 detector script (`plugins/typesafe-ai/scripts/detect-llm-hotspots.py`) executing in <150ms with zero pip dependencies, writing authoritative runlogs to `.typesafe/optimize-last.json`.
 - **Slash command `/typesafe-ai:optimize`:** Wired the 4-phase audit workflow directly to `detect-llm-hotspots.py` rather than parsing terminal stdout.
 - **OMP subagent setup:** Documented native `task.agentModelOverrides` in `/clube:omp-setup` ensuring `expert-jev` spawns reliably in Oh My Pi without preflight errors.
-- Synchronized `package.json`, the `clube` catalog entries, the 5 `clube` plugin manifests, and the vertical skill frontmatter to `v0.7.3`. `typesafe-ai` and `code-review` ship at their own `v0.1.0`.
+- Synchronized `package.json`, the `clube` catalog entries, the 5 `clube` plugin manifests, and the vertical skill frontmatter to `v0.7.3`. Bumped `typesafe-ai` to `v0.1.1` across its 5 plugin manifests and catalogs. `code-review` ships at its own `v0.1.0`.
 
 ## [0.7.2] - 2026-09-27
 

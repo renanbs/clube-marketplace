@@ -5,7 +5,7 @@
     "email": "contato@clube.com.br"
   },
   "metadata": {
-    "description": "Clube AI marketplace — engineering workflows, SaaS optimization, SEO/GEO, analytics & privacy skills."
+    "description": "Clube AI marketplace \u2014 engineering workflows, SaaS optimization, SEO/GEO, analytics & privacy skills."
   },
   "plugins": [
     {
@@ -22,7 +22,7 @@
     },
     {
       "name": "typesafe-ai",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "source": "./plugins/typesafe-ai",
       "description": "TypeSafe AI integration for Jev System 1 decision engine, calibrated confidence gating, and token optimization."
     }

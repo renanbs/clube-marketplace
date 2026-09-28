@@ -1,7 +1,7 @@
 ---
 name: typesafe-jev
 description: "Replace expensive LLM text generation with fast, calibrated, typed decisions using TypeSafe AI's Jev model. Offload classification, intent routing, and schema validation to cut token costs and latency across Python, TypeScript, Go, and Rust."
-version: 0.1.0
+version: 0.1.1
 topics:
   - system1-architecture
   - confidence-gating
