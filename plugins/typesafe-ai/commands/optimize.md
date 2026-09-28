@@ -16,20 +16,17 @@ Delegates to the `expert-jev` agent using the `typesafe-jev` skill.
 Execute the audit following the standard 4-phase contract:
 
 ### 1. Plan
-- Identify all source code files containing LLM SDK imports or API clients:
-  - Python: `openai`, `anthropic`, `langchain`, `litellm`, `pydantic_ai`, `instructor`
-  - TypeScript: `@ai-sdk/`, `openai`, `@anthropic-ai/sdk`, `langchain`
-  - Go: `github.com/sashabaranov/go-openai`, `langchaingo`
-  - Rust: `async-openai`
-- Scope files and identify prompts requesting structured JSON, classification, booleans, or routing.
+- Identify repository scope and target directory.
+- Prepare deterministic execution of the TypeSafe AI detector:
+  `python3 plugins/typesafe-ai/scripts/detect-llm-hotspots.py [--target <dir>]`
 
 ### 2. Execution
-- Inspect each detected prompt and response handler.
-- Flag candidates where:
-  - The prompt asks for an enum, boolean, category, or fixed schema without requiring long-form prose.
-  - Generative tokens are wasted on formatting or markdown codeblocks (` ```json `).
-  - The endpoint suffers from multi-second latency where <20ms is desirable.
-
+- Execute `python3 plugins/typesafe-ai/scripts/detect-llm-hotspots.py --target <dir>`.
+- Read authoritative runlog from `.typesafe/optimize-last.json` (never parse ANSI terminal stdout).
+- For each candidate hotspot, inspect the source file to evaluate:
+  - The prompt asking for an enum, boolean, category, or fixed schema without requiring long-form prose.
+  - Generative tokens wasted on formatting or markdown codeblocks (` ```json `).
+  - Endpoints suffering from multi-second latency where <20ms is desirable.
 ### 3. Summary
 - Present a structured markdown table of optimization candidates:
 

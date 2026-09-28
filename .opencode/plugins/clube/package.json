@@ -1,6 +1,6 @@
 {
   "name": "@clube/opencode-plugin",
-  "version": "0.7.2",
+  "version": "0.7.3",
   "description": "Clube OpenCode plugin - workflow, audit & domain expert skills",
   "main": "index.ts",
   "type": "module",

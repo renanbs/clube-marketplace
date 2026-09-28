@@ -6,7 +6,7 @@ description: |
   Activate this skill whenever configuring frontend builds, chunk recovery, edge caching, container runtimes, or database indexing.
 license: Apache-2.0
 metadata:
-  version: v0.7.2
+  version: v0.7.3
   author: clubedepontos
 ---
 
