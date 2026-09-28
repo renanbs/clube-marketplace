@@ -1,0 +1,16 @@
+{
+  "name": "@clube/opencode-plugin-typesafe-ai",
+  "version": "0.1.0",
+  "description": "TypeSafe AI Jev OpenCode plugin - System 1 decision engine and token optimization",
+  "main": "index.ts",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@opencode/plugin": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
