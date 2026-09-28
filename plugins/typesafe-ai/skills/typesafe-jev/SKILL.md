@@ -39,6 +39,17 @@ Every Jev judgment returns a calibrated confidence score (`0.0` to `1.0`). Alway
 - **Ambiguous ($0.60 \le \text{score} < 0.85$):** Fallback to secondary check, domain-specific rule, or System 2 LLM.
 - **Low Confidence ($< 0.60$):** Escalate to human operator / review queue.
 
+### 3. Secure Credential Management (Linux Keyring)
+Never commit or hardcode raw API keys. Under Linux, retrieve the API key dynamically from the system keyring:
+```bash
+# Using secret-tool (preferred):
+export TYPESAFE_API_KEY=$(secret-tool lookup service typesafe-ai)
+
+# Using pass fallback:
+export TYPESAFE_API_KEY=$(pass show typesafe-ai/api-key 2>/dev/null)
+```
+Run `/clube:omp-setup` or `/clube:init` to preflight and store credentials in the keyring.
+
 See `references/confidence-gating.md` for threshold policies and escalation matrices.
 
 ---
