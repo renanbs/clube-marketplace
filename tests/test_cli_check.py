@@ -439,6 +439,19 @@ def test_real_repository_typesafe_jev_skill_and_references():
     present_refs = {p.name for p in refs_dir.glob("*.md")} if refs_dir.is_dir() else set()
     assert expected_refs.issubset(present_refs), f"Missing references: {expected_refs - present_refs}"
 
+def test_real_repository_typesafe_ai_agent_and_command():
+    """The typesafe-ai plugin must include the expert-jev agent and optimize command."""
+    repo_root = cli_repo_root()
+    agent_file = repo_root / "plugins" / "typesafe-ai" / "agents" / "expert-jev.md"
+    command_file = repo_root / "plugins" / "typesafe-ai" / "commands" / "optimize.md"
+    assert agent_file.is_file()
+    assert command_file.is_file()
+    content = command_file.read_text(encoding="utf-8")
+    assert "### 1. Plan" in content
+    assert "### 2. Execution" in content
+    assert "### 3. Summary" in content
+    assert "### 4. Recommended Actions" in content
+
 def cli_repo_root():
     from pathlib import Path
 
