@@ -5,6 +5,17 @@ Todas as mudanças notáveis no Clube Marketplace serão documentadas neste arqu
 O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-09-27
+
+### Adicionado
+- **Plugin `typesafe-ai` (`plugins/typesafe-ai/`, v0.1.0):** Integração com a TypeSafe AI e o motor de decisões System 1 **Jev**.
+  - **Skill `typesafe-jev`:** Offloading de tarefas de System 2 para System 1, confidence gating calibrado e otimização de consumo de tokens em Python, TypeScript, Go e Rust.
+  - **6 guias de referência técnica:** `system1-architecture.md`, `confidence-gating.md`, `python-pydantic.md` (Pydantic AI / `TypeSafeModel`), `typescript-sdk.md` (schemas Zod), `go-integration.md` (Ports & Adapters, HTTP/gRPC) e `rust-integration.md` (Tokio, enums algébricos `serde`).
+  - **Agente Especialista `expert-jev`:** Especialista em arquitetura de decisões System 1 projetando schemas tipados e thresholds calibrados de confiança.
+  - **Comando Slash `/typesafe-ai:optimize`:** Comando de auditoria com contrato de 4 fases que inspeciona repositórios em busca de chamadas caras de LLM que podem ser substituídas por Jev para reduzir custos de tokens e baixar a latência para menos de 20ms.
+  - **Suporte multi-harness:** Manifests para Claude Code, Cursor, Codex, Oh My Pi e adaptador OpenCode V2 (`.opencode/plugins/typesafe-ai/`).
+- `package.json`, as entradas do `clube` nos catálogos, os 5 manifests do plugin `clube` e o frontmatter das skills verticais sincronizados em `v0.7.0`. `typesafe-ai` e `code-review` permanecem em suas versões próprias `v0.1.0`.
+
 ## [0.6.0] - 2026-09-23
 
 ### Adicionado

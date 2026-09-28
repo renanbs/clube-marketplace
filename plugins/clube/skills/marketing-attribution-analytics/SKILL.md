@@ -7,7 +7,7 @@ description: |
   Activate this skill whenever configuring conversion tags, first-touch cookies, CAPI, or marketing persistence.
 license: Apache-2.0
 metadata:
-  version: v0.6.0
+  version: v0.7.0
   author: clubedepontos
 ---
 
