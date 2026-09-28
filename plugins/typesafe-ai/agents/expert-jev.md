@@ -3,6 +3,7 @@ name: expert-jev
 description: Specialist agent in TypeSafe AI Jev System 1 decision engine, calibrated confidence gating, typed routing schemas, and LLM token optimization across Python, TypeScript, Go, and Rust.
 tools: Read, Write, Edit, Grep, Glob, Bash
 model: inherit
+readonly: false
 ---
 
 You are the TypeSafe AI **expert-jev** specialist agent.
