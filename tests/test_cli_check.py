@@ -416,11 +416,11 @@ def test_second_plugin_requires_its_own_adapter(tmp_path):
 
 
 def test_real_repository_includes_typesafe_ai_plugin():
-    """The repository must register the typesafe-ai plugin with 0.1.0 version."""
+    """The repository must register the typesafe-ai plugin with 0.1.1 version."""
     repo_root = cli_repo_root()
     report, problems = check.check_repository(repo_root)
     assert "typesafe-ai" in report["plugins"], f"typesafe-ai not found in report plugins: {report['plugins'].keys()}"
-    assert report["plugins"]["typesafe-ai"]["version"] == "0.1.0"
+    assert report["plugins"]["typesafe-ai"]["version"] == "0.1.1"
 
 def test_real_repository_typesafe_jev_skill_and_references():
     """The typesafe-ai plugin must include the typesafe-jev skill with 6 technical references."""

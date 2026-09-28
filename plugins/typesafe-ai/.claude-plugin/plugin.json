@@ -1,7 +1,7 @@
 {
   "name": "typesafe-ai",
   "description": "TypeSafe AI integration for Jev System 1 decision engine, calibrated confidence gating, and token optimization",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": {
     "name": "Clube"
   },

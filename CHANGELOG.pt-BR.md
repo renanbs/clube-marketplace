@@ -11,7 +11,7 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/spec
 - **Detector de Hotspots TypeSafe AI:** Adicionado script detector determinístico em Python 3 (`plugins/typesafe-ai/scripts/detect-llm-hotspots.py`) com execução em <150ms e zero dependências externas, persistindo relatórios estruturados em `.typesafe/optimize-last.json`.
 - **Slash command `/typesafe-ai:optimize`:** Integrado o fluxo de auditoria de 4 fases diretamente ao `detect-llm-hotspots.py` em vez de inspecionar texto cru de terminal.
 - **Setup de subagentes no OMP:** Documentado `task.agentModelOverrides` no comando `/clube:omp-setup` garantindo inicialização limpa do `expert-jev` no Oh My Pi sem erros de preflight.
-- `package.json`, as entradas do `clube` nos catálogos, os 5 manifests do plugin `clube` e o frontmatter das skills verticais sincronizados em `v0.7.3`. `typesafe-ai` e `code-review` permanecem em suas versões próprias `v0.1.0`.
+- `package.json`, as entradas do `clube` nos catálogos, os 5 manifests do plugin `clube` e o frontmatter das skills verticais sincronizados em `v0.7.3`. `typesafe-ai` atualizado para `v0.1.1` em seus 5 manifests e catálogos. `code-review` permanece em sua versão própria `v0.1.0`.
 
 ## [0.7.2] - 2026-09-27
 
