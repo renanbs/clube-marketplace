@@ -41,7 +41,8 @@ clube-marketplace/
 │   ├── opencode.json                   # Configuração do OpenCode V2 (paths relativos portáveis)
 │   └── plugins/                        # Adaptadores de plugin para OpenCode
 │       ├── clube/index.ts              # Adaptador Clube: 7 skills + 6 comandos
-│       └── code-review/index.ts        # Adaptador code review: 1 skill + 1 comando
+│       ├── code-review/index.ts        # Adaptador code review: 1 skill + 1 comando
+│       └── typesafe-ai/index.ts        # Adaptador TypeSafe AI: 1 skill + 1 comando
 ├── Makefile                            # Alvos operacionais (check, audit, sync, init)
 ├── AGENTS.md                           # Instruções canônicas e Project Profile
 ├── CLAUDE.md                           # Ponteiro -> @AGENTS.md
@@ -97,6 +98,13 @@ clube-marketplace/
         └── skills/code-review/
             ├── SKILL.md                # Checklist geral, escala de severidade e veredito
             └── references/             # go.md, typescript.md, rust.md (carregados sob demanda)
+    └── typesafe-ai/                    # Plugin TypeSafe AI (v0.1.0, versionado de forma independente)
+        ├── .{claude,cursor,codex,omp,opencode}-plugin/plugin.json
+        ├── commands/optimize.md        # /typesafe-ai:optimize
+        ├── agents/expert-jev.md        # Especialista em decisões System 1 e otimização de tokens
+        └── skills/typesafe-jev/
+            ├── SKILL.md                # Offloading System 1 e confidence gating calibrado
+            └── references/             # Integrações em Python, TypeScript, Go, Rust e arquitetura
 ```
 
 ---
@@ -108,6 +116,7 @@ clube-marketplace/
 /plugin marketplace add git@github.com:clubedepontos/clube-marketplace.git
 /plugin install clube@clube
 /plugin install code-review@clube
+/plugin install typesafe-ai@clube
 ```
 
 ### Oh My Pi (OMP)
@@ -115,6 +124,7 @@ clube-marketplace/
 /marketplace add https://github.com/clubedepontos/clube-marketplace
 /marketplace install --scope project clube@clube
 /marketplace install --scope project code-review@clube
+/marketplace install --scope project typesafe-ai@clube
 ```
 *Nota: Ao utilizar agentes customizados no OMP, execute `/clube:omp-setup` uma vez para configurar as sobreposições de modelo.*
 
@@ -124,6 +134,7 @@ Adicione como marketplace de equipe via **Configurações → Plugins**, ou crie
 mkdir -p ~/.cursor/plugins/local
 ln -s "$(pwd)/plugins/clube" ~/.cursor/plugins/local/clube
 ln -s "$(pwd)/plugins/code-review" ~/.cursor/plugins/local/code-review
+ln -s "$(pwd)/plugins/typesafe-ai" ~/.cursor/plugins/local/typesafe-ai
 ```
 
 ### Codex
@@ -131,6 +142,7 @@ ln -s "$(pwd)/plugins/code-review" ~/.cursor/plugins/local/code-review
 codex plugin marketplace add clubedepontos/clube-marketplace --ref main
 codex plugin install clube --source clube
 codex plugin install code-review --source clube
+codex plugin install typesafe-ai --source clube
 ```
 
 ### OpenCode V2
@@ -144,6 +156,7 @@ o adaptador no `opencode.json` do seu projeto:
 # A partir deste repositório (desenvolvimento local)
 cd .opencode/plugins/clube && npm install
 cd ../code-review && npm install
+cd ../typesafe-ai && npm install
 ```
 
 Depois adicione ao `opencode.json` do seu projeto:
@@ -152,7 +165,8 @@ Depois adicione ao `opencode.json` do seu projeto:
 {
   "plugins": [
     "/caminho/para/clube-marketplace/.opencode/plugins/clube",
-    "/caminho/para/clube-marketplace/.opencode/plugins/code-review"
+    "/caminho/para/clube-marketplace/.opencode/plugins/code-review",
+    "/caminho/para/clube-marketplace/.opencode/plugins/typesafe-ai"
   ],
   "agents": {
     "expert-seo": { "mode": "subagent", "system": "/caminho/para/clube-marketplace/plugins/clube/agents/expert-seo.md" },
@@ -160,7 +174,8 @@ Depois adicione ao `opencode.json` do seu projeto:
     "expert-privacy": { "mode": "subagent", "system": "/caminho/para/clube-marketplace/plugins/clube/agents/expert-privacy.md" },
     "expert-performance": { "mode": "subagent", "system": "/caminho/para/clube-marketplace/plugins/clube/agents/expert-performance.md" },
     "clube-auditor": { "mode": "subagent", "system": "/caminho/para/clube-marketplace/plugins/clube/agents/clube-auditor.md" },
-    "reviewer": { "mode": "subagent", "system": "/caminho/para/clube-marketplace/plugins/code-review/agents/reviewer.md" }
+    "reviewer": { "mode": "subagent", "system": "/caminho/para/clube-marketplace/plugins/code-review/agents/reviewer.md" },
+    "expert-jev": { "mode": "subagent", "system": "/caminho/para/clube-marketplace/plugins/typesafe-ai/agents/expert-jev.md" }
   }
 }
 ```
@@ -224,6 +239,16 @@ Um plugin separado, versionado de forma independente do `clube` (atualmente `v0.
 | Comando | `/code-review:review` | Revisa as mudanças staged (ou, na falta delas, a branch atual), uma branch (`<branch>`) ou um pull request (`#<número>`). |
 | Agente | `reviewer` | Somente leitura, classe `critique`. Carrega só as regras das linguagens presentes no diff, aplica as convenções do `AGENTS.md` do projeto e responde `APPROVE` ou `CHANGES-REQUESTED`. |
 | Skill | `code-review:code-review` | Checklist geral (corretude, tratamento de erros, nomes, performance, segurança, testes, contratos de API, convenções) e escala de severidade, com `references/go.md`, `references/typescript.md` e `references/rust.md`. |
+
+## Plugin TypeSafe AI (`plugins/typesafe-ai`)
+
+Um plugin dedicado (v0.1.0) que integra o motor de decisões **Jev** da TypeSafe AI (System 1) para eliminar desperdício de tokens com LLMs, aplicar confidence gating calibrado e acelerar decisões para latências abaixo de 20ms.
+
+| Componente | Nome | Foco |
+| :--- | :--- | :--- |
+| Comando | `/typesafe-ai:optimize` | Varre o código em busca de chamadas caras de LLM (classificação, triagem, JSON estruturado) e gera substituições prontas com Jev, estimando economia de tokens e latência. |
+| Agente | `expert-jev` | Especialista em decisões System 1 desenhando schemas estritos (Pydantic, Zod, Go, Serde) e thresholds calibrados de confiança. |
+| Skill | `typesafe-ai:typesafe-jev` | Disciplina de engenharia para migrar tarefas de LLMs generativas para Jev, com referências técnicas aprofundadas para Python, TypeScript, Go e Rust. |
 
 ---
 

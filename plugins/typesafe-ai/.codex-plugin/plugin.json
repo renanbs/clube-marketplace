@@ -1,0 +1,39 @@
+{
+  "name": "typesafe-ai",
+  "version": "0.1.0",
+  "description": "TypeSafe AI integration for Jev System 1 decision engine, calibrated confidence gating, and token optimization",
+  "author": {
+    "name": "Clube",
+    "email": "contato@clube.com.br",
+    "url": "https://github.com/clube/clube-marketplace"
+  },
+  "homepage": "https://github.com/clube/clube-marketplace",
+  "repository": "https://github.com/clube/clube-marketplace",
+  "license": "MIT",
+  "keywords": [
+    "typesafe-ai",
+    "jev",
+    "system-1",
+    "token-optimization",
+    "confidence-gating",
+    "python",
+    "typescript",
+    "go",
+    "rust"
+  ],
+  "skills": "./skills/",
+  "commands": "./commands/",
+  "agents": "./agents/",
+  "interface": {
+    "displayName": "TypeSafe AI (Jev)",
+    "shortDescription": "TypeSafe AI Jev System 1 decision engine and token optimization",
+    "longDescription": "Replace expensive LLM text generation with fast, calibrated, typed decisions using TypeSafe AI's Jev model. Offload classification, routing, and schema validation to cut token costs and latency across Python, TypeScript, Go, and Rust.",
+    "developerName": "Clube",
+    "category": "AI / Automation",
+    "websiteURL": "https://github.com/clube/clube-marketplace",
+    "defaultPrompt": [
+      "Optimize LLM token usage with typesafe-ai:optimize",
+      "Route decisions with typesafe-jev skill"
+    ]
+  }
+}

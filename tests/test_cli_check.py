@@ -415,6 +415,43 @@ def test_second_plugin_requires_its_own_adapter(tmp_path):
                for p in problems)
 
 
+def test_real_repository_includes_typesafe_ai_plugin():
+    """The repository must register the typesafe-ai plugin with 0.1.0 version."""
+    repo_root = cli_repo_root()
+    report, problems = check.check_repository(repo_root)
+    assert "typesafe-ai" in report["plugins"], f"typesafe-ai not found in report plugins: {report['plugins'].keys()}"
+    assert report["plugins"]["typesafe-ai"]["version"] == "0.1.0"
+
+def test_real_repository_typesafe_jev_skill_and_references():
+    """The typesafe-ai plugin must include the typesafe-jev skill with 6 technical references."""
+    repo_root = cli_repo_root()
+    skill_dir = repo_root / "plugins" / "typesafe-ai" / "skills" / "typesafe-jev"
+    assert (skill_dir / "SKILL.md").is_file()
+    refs_dir = skill_dir / "references"
+    expected_refs = {
+        "system1-architecture.md",
+        "confidence-gating.md",
+        "python-pydantic.md",
+        "typescript-sdk.md",
+        "go-integration.md",
+        "rust-integration.md",
+    }
+    present_refs = {p.name for p in refs_dir.glob("*.md")} if refs_dir.is_dir() else set()
+    assert expected_refs.issubset(present_refs), f"Missing references: {expected_refs - present_refs}"
+
+def test_real_repository_typesafe_ai_agent_and_command():
+    """The typesafe-ai plugin must include the expert-jev agent and optimize command."""
+    repo_root = cli_repo_root()
+    agent_file = repo_root / "plugins" / "typesafe-ai" / "agents" / "expert-jev.md"
+    command_file = repo_root / "plugins" / "typesafe-ai" / "commands" / "optimize.md"
+    assert agent_file.is_file()
+    assert command_file.is_file()
+    content = command_file.read_text(encoding="utf-8")
+    assert "### 1. Plan" in content
+    assert "### 2. Execution" in content
+    assert "### 3. Summary" in content
+    assert "### 4. Recommended Actions" in content
+
 def cli_repo_root():
     from pathlib import Path
 
