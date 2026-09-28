@@ -113,7 +113,7 @@ clube-marketplace/
 
 ### Claude Code
 ```bash
-/plugin marketplace add git@github.com:clubedepontos/clube-marketplace.git
+/plugin marketplace add https://github.com/renanbs/clube-marketplace
 /plugin install clube@clube
 /plugin install code-review@clube
 /plugin install typesafe-ai@clube
@@ -121,7 +121,7 @@ clube-marketplace/
 
 ### Oh My Pi (OMP)
 ```bash
-/marketplace add https://github.com/clubedepontos/clube-marketplace
+/marketplace add https://github.com/renanbs/clube-marketplace
 /marketplace install --scope project clube@clube
 /marketplace install --scope project code-review@clube
 /marketplace install --scope project typesafe-ai@clube
@@ -139,7 +139,7 @@ ln -s "$(pwd)/plugins/typesafe-ai" ~/.cursor/plugins/local/typesafe-ai
 
 ### Codex
 ```bash
-codex plugin marketplace add clubedepontos/clube-marketplace --ref main
+codex plugin marketplace add renanbs/clube-marketplace --ref main
 codex plugin install clube --source clube
 codex plugin install code-review --source clube
 codex plugin install typesafe-ai --source clube
